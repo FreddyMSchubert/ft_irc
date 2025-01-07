@@ -5,6 +5,8 @@
 #include <vector>
 #include <algorithm>
 
+// if theres just a keyword (all need other args), just send a help msg of what is needed
+
 static std::vector<std::string> split(const std::string &str, char delim)
 {
 	std::vector<std::string> tokens;
@@ -53,7 +55,9 @@ void CommandHandler::handleCommand(Server &srv, int fd, const std::string &line)
 		c->setUsername(parts[1]);
 		srv.sendMessage(fd, "Your username is now " + parts[1] + " (ಥ‿ಥ)\n");
 	}
-	else if (parts[0] == "JOIN")
+	else if (parts[0] == "JOIN")	// make this verify channel password if present and necessary
+									// make this ensure invite was sent if necessary
+									// log out all available channels if no args are provided
 	{
 		// Example: JOIN #channel
 		if (parts.size() < 2) return;
@@ -79,7 +83,7 @@ void CommandHandler::handleCommand(Server &srv, int fd, const std::string &line)
 		}
 		srv.broadcastChannel(channelName, c->getNickname() + " joined " + channelName, fd);
 	}
-	else if (parts[0] == "PRIVMSG")
+	else if (parts[0] == "PRIVMSG") // rename as msg
 	{
 		// PRIVMSG #channel :Hello everyone!
 		// or PRIVMSG nickname :Hello you
@@ -119,7 +123,7 @@ void CommandHandler::handleCommand(Server &srv, int fd, const std::string &line)
 		Channel* chan = srv.getChannel(parts[1]);
 		if (!chan) return;
 		Client* c = srv.getClient(fd);
-		if (!c->isAuthenticated() || !chan->isOperator(fd))
+		if (!c->isAuthenticated() || !chan->isOperator(fd)) // cant throw yourself out of topic
 		{
 			srv.sendMessage(fd, "You are not operator. Begone! (；一_一)\n");
 			return;
@@ -133,14 +137,14 @@ void CommandHandler::handleCommand(Server &srv, int fd, const std::string &line)
 				if (chan->isMember(it->first))
 				{
 					chan->removeMember(it->first);
-					srv.sendMessage(it->first, "You were KICKed from " + parts[1] + "\n");
+					srv.sendMessage(it->first, "You were KICKed from " + parts[1] + "ヽ(╬☉Д⊙)ﾉ┌┛)๏д๏)ﾉ\n");
 					srv.broadcastChannel(parts[1], parts[2] + " was kicked from " + parts[1], fd);
 					break;
 				}
 			}
 		}
 	}
-	else if (parts[0] == "INVITE")
+	else if (parts[0] == "INVITE") // gotta track invitations
 	{
 		// INVITE user #channel
 		if (parts.size() < 3) return;

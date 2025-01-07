@@ -19,7 +19,7 @@ public:
 
 	void setNickname(const std::string &nick)   { _nickname = nick; }
 	void setUsername(const std::string &user)   { _username = user; }
-	void setAuthenticated(bool auth)            { _isAuthenticated = auth; }
+	void setAuthenticated(bool auth)            { _isAuthenticated = auth; } // password is just to join. nothing without this
 
 	int  getFd() const                          { return _fd; }
 	std::string getNickname() const             { return _nickname; }

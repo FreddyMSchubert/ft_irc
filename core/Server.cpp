@@ -10,9 +10,9 @@
 #include <arpa/inet.h>
 
 Server::Server(int port, const std::string &password)
-: _port(port), _password(password), _listener(-1), _running(true)
+: _port(port), _password(password), _listener(-1)
 {
-	setupListener();
+	setupListener(); //dont need that just write whats in the function in here
 }
 
 Server::~Server()
@@ -58,7 +58,7 @@ void Server::setupListener()
 
 void Server::run()
 {
-	while (_running)
+	while (true)
 	{
 		int ready = poll(&_pollFds[0], _pollFds.size(), 5000); // 5 seconds poll
 		if (ready < 0)
@@ -115,7 +115,7 @@ void Server::acceptNewClient()
 
 void Server::handleClientData(int fd)
 {
-	char buf[512];
+	char buf[512]; // max message len in irc standard
 	std::memset(buf, 0, sizeof(buf));
 	ssize_t bytes = recv(fd, buf, 511, 0);
 	if (bytes <= 0)

@@ -17,9 +17,8 @@ private:
 	int                 _port;
 	std::string         _password;
 	int                 _listener;
-	bool                _running;
 
-	std::vector<struct pollfd>        _pollFds;
+	std::vector<struct pollfd>        _pollFds; // dont use the structs just use fds directly pollfd is for poll input output
 	std::map<int, Client>             _clients;
 	std::map<std::string, Channel>    _channels;
 
