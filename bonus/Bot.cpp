@@ -1,6 +1,6 @@
 #include "Bot.hpp"
-#include "Server.hpp"
-#include "Client.hpp"
+#include "../core/Server.hpp"
+#include "../modules/Client.hpp"
 #include <cstdlib> // rand, srand
 #include <ctime>
 #include <vector>
@@ -21,7 +21,6 @@ void Bot::handleBotMessage(Server &srv, int fd, const std::string &message)
 	jokes.push_back("I've got a really good UDP joke... but you might not get it. ( ͡° ͜ʖ ͡°)");
 	jokes.push_back("In C++98, we don't talk about modern things like 'auto'—barbaric! (ง'̀-'́)ง");
 	jokes.push_back("Never trust an atom, they make up everything. 🧪");
-	jokes.push_back("You rang, Mr. Elsher? The Bot is at your service! 🍸");
 
 	int r = std::rand() % jokes.size();
 	// We'll just reply with a random quip
