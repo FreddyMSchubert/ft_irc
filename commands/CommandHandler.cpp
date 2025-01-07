@@ -1,6 +1,6 @@
 #include "CommandHandler.hpp"
-#include "Server.hpp"
-#include "Client.hpp"
+#include "../core/Server.hpp"
+#include "../modules/Client.hpp"
 #include <sstream>
 #include <vector>
 #include <algorithm>
@@ -265,6 +265,6 @@ void CommandHandler::handleCommand(Server &srv, int fd, const std::string &line)
 	else
 	{
 		// Unknown command
-		srv.sendMessage(fd, "Unknown command, dear Mr. Elsher (◔_◔) 🖕");
+		srv.sendMessage(fd, "Unknown command (◔_◔) 🖕");
 	}
 }

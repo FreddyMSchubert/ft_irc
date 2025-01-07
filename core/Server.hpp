@@ -5,11 +5,11 @@
 #include <string>
 #include <vector>
 #include <poll.h>
-#include "Client.hpp"
-#include "Channel.hpp"
-#include "CommandHandler.hpp"
-#include "Bot.hpp"
-#include "FileTransfer.hpp"
+#include "../modules/Client.hpp"
+#include "../modules/Channel.hpp"
+#include "../commands/CommandHandler.hpp"
+#include "../bonus/Bot.hpp"
+#include "../bonus/FileTransfer.hpp"
 
 class Server
 {

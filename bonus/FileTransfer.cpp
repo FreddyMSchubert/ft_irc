@@ -1,6 +1,6 @@
 #include "FileTransfer.hpp"
-#include "Server.hpp"
-#include "Client.hpp"
+#include "../core/Server.hpp"
+#include "../modules/Client.hpp"
 #include <iostream>
 #include <fstream>
 #include <map>
