@@ -32,10 +32,10 @@ void CommandHandler::handleCommand(Server &srv, int fd, const std::string &line)
 		{
 			Client* c = srv.getClient(fd);
 			if (c) c->setAuthenticated(true);
-			srv.sendMessage(fd, "AUTH OK 🖕");
+			srv.sendMessage(fd, "AUTH OK\n");
 		}
 		else
-			srv.sendMessage(fd, "AUTH FAIL: Wrong password (ಥ﹏ಥ)");
+			srv.sendMessage(fd, "AUTH FAIL: Wrong password (ಥ﹏ಥ)\n");
 	}
 	else if (parts[0] == "NICK")
 	{
@@ -43,7 +43,7 @@ void CommandHandler::handleCommand(Server &srv, int fd, const std::string &line)
 		Client* c = srv.getClient(fd);
 		if (!c) return;
 		c->setNickname(parts[1]);
-		srv.sendMessage(fd, "Your nickname is now " + parts[1] + " ヽ(´▽`)/");
+		srv.sendMessage(fd, "Your nickname is now " + parts[1] + " ヽ(´▽`)/\n");
 	}
 	else if (parts[0] == "USER")
 	{
@@ -51,7 +51,7 @@ void CommandHandler::handleCommand(Server &srv, int fd, const std::string &line)
 		Client* c = srv.getClient(fd);
 		if (!c) return;
 		c->setUsername(parts[1]);
-		srv.sendMessage(fd, "Your username is now " + parts[1] + " (ಥ‿ಥ)");
+		srv.sendMessage(fd, "Your username is now " + parts[1] + " (ಥ‿ಥ)\n");
 	}
 	else if (parts[0] == "JOIN")
 	{
@@ -60,7 +60,7 @@ void CommandHandler::handleCommand(Server &srv, int fd, const std::string &line)
 		Client* c = srv.getClient(fd);
 		if (!c || !c->isAuthenticated()) 
 		{
-			srv.sendMessage(fd, "You must PASS first, dear friend (ಥ_ʖಥ)");
+			srv.sendMessage(fd, "You must PASS first, dear friend (ಥ_ʖಥ)\n");
 			return;
 		}
 		std::string channelName = parts[1];
@@ -72,7 +72,7 @@ void CommandHandler::handleCommand(Server &srv, int fd, const std::string &line)
 		{
 			if (chan->getUserLimit() > 0 && (int)chan->getMembers().size() >= chan->getUserLimit())
 			{
-				srv.sendMessage(fd, "Channel is full 🚫");
+				srv.sendMessage(fd, "Channel is full 🚫\n");
 				return;
 			}
 			chan->addMember(fd);
@@ -106,7 +106,7 @@ void CommandHandler::handleCommand(Server &srv, int fd, const std::string &line)
 			{
 				if (it->second.getNickname() == target)
 				{
-					srv.sendMessage(it->first, c->getNickname() + " (private): " + msg + " 🖕");
+					srv.sendMessage(it->first, c->getNickname() + " (private): " + msg + "\n");
 					break;
 				}
 			}
@@ -121,7 +121,7 @@ void CommandHandler::handleCommand(Server &srv, int fd, const std::string &line)
 		Client* c = srv.getClient(fd);
 		if (!c->isAuthenticated() || !chan->isOperator(fd))
 		{
-			srv.sendMessage(fd, "You are not operator. Begone! (；一_一)");
+			srv.sendMessage(fd, "You are not operator. Begone! (；一_一)\n");
 			return;
 		}
 		// find user by nickname
@@ -133,7 +133,7 @@ void CommandHandler::handleCommand(Server &srv, int fd, const std::string &line)
 				if (chan->isMember(it->first))
 				{
 					chan->removeMember(it->first);
-					srv.sendMessage(it->first, "You were KICKed from " + parts[1] + " 🦶👢");
+					srv.sendMessage(it->first, "You were KICKed from " + parts[1] + "\n");
 					srv.broadcastChannel(parts[1], parts[2] + " was kicked from " + parts[1], fd);
 					break;
 				}
@@ -148,7 +148,7 @@ void CommandHandler::handleCommand(Server &srv, int fd, const std::string &line)
 		if (!chan) return;
 		if (!chan->isOperator(fd))
 		{
-			srv.sendMessage(fd, "You must be an operator to invite! ヽ(｀Д´)ﾉ");
+			srv.sendMessage(fd, "You must be an operator to invite! ヽ(｀Д´)ﾉ\n");
 			return;
 		}
 		// find user
@@ -157,7 +157,7 @@ void CommandHandler::handleCommand(Server &srv, int fd, const std::string &line)
 		{
 			if (it->second.getNickname() == parts[1])
 			{
-				srv.sendMessage(it->first, "You have been invited to " + parts[2] + " 🎉");
+				srv.sendMessage(it->first, "You have been invited to " + parts[2] + " 🎉\n");
 				// For an actual invite-only channel, you'd track invitations, etc.
 				break;
 			}
@@ -180,7 +180,7 @@ void CommandHandler::handleCommand(Server &srv, int fd, const std::string &line)
 			// set topic
 			if (chan->isTopicRestricted() && !chan->isOperator(fd))
 			{
-				srv.sendMessage(fd, "Topic is restricted to ops only, dear chap!");
+				srv.sendMessage(fd, "Topic is restricted to ops only, dear chap!\n");
 				return;
 			}
 			std::string newTopic;
@@ -191,7 +191,7 @@ void CommandHandler::handleCommand(Server &srv, int fd, const std::string &line)
 					newTopic += " ";
 			}
 			chan->setTopic(newTopic);
-			srv.broadcastChannel(chan->getName(), c->getNickname() + " changed the topic to: " + newTopic);
+			srv.broadcastChannel(chan->getName(), c->getNickname() + " changed the topic to: " + newTopic + "\n");
 		}
 	}
 	else if (parts[0] == "MODE")
@@ -204,7 +204,7 @@ void CommandHandler::handleCommand(Server &srv, int fd, const std::string &line)
 		Client* c = srv.getClient(fd);
 		if (!c->isAuthenticated() || !chan->isOperator(fd))
 		{
-			srv.sendMessage(fd, "You are not channel operator! (ಠ_ಠ)");
+			srv.sendMessage(fd, "You are not channel operator! (ಠ_ಠ)\n");
 			return;
 		}
 		std::string modes = parts[2];
@@ -229,7 +229,7 @@ void CommandHandler::handleCommand(Server &srv, int fd, const std::string &line)
 							if (it->second.getNickname() == parts[3])
 							{
 								chan->setOperator(it->first, plus);
-								srv.sendMessage(it->first, "You are now " + std::string(plus ? "" : "no longer ") + "an operator");
+								srv.sendMessage(it->first, "You are now " + std::string(plus ? "" : "no longer ") + "an operator\n");
 								break;
 							}
 						}
@@ -241,13 +241,13 @@ void CommandHandler::handleCommand(Server &srv, int fd, const std::string &line)
 					break;
 			}
 		}
-		srv.sendMessage(fd, "Mode change complete (∩｀-´)⊃━☆ﾟ.*･｡ﾟ");
+		srv.sendMessage(fd, "Mode change complete (∩｀-´)⊃━☆ﾟ.*･｡ﾟ\n");
 	}
 	else if (parts[0] == "FILE")
 	{
 		// Bonus: file transfer -> usage example: FILE #channel /path/to/file
 		if (parts.size() < 3) return;
-		srv.sendMessage(fd, "Initiating file transfer 🖕...");
+		srv.sendMessage(fd, "Initiating file transfer ...\n");
 		// In a real scenario: read file, send chunk by chunk to channel or specific user
 		srv.getFileTransfer().transferFile(srv, fd, parts[1], parts[2]);
 	}
@@ -265,6 +265,6 @@ void CommandHandler::handleCommand(Server &srv, int fd, const std::string &line)
 	else
 	{
 		// Unknown command
-		srv.sendMessage(fd, "Unknown command (◔_◔) 🖕");
+		srv.sendMessage(fd, "Unknown command (◔_◔)\n");
 	}
 }
