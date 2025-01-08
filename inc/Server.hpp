@@ -40,6 +40,8 @@ typedef struct s_socket_data
 	t_socket_state states;
 	std::stringstream buffer;
 
+	std::string dataToSend;
+
 	s_socket_data(int fd, Socket socket) : socket(std::move(socket)), fd(fd), buffer() {}
 	s_socket_data(const s_socket_data&) = delete;
 	s_socket_data& operator=(const s_socket_data&) = delete;
@@ -79,4 +81,6 @@ class Server
 		~Server() = default;
 		
 		void Run(); // Main server loop
+
+		void sendMessage(int fd, const std::string &msg);
 };
