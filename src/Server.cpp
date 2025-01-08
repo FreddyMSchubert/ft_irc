@@ -44,7 +44,7 @@ void Server::updatePoll()
 	for (size_t i = 0; i < fds.size() - 1; i++)
 	{
 		m_sockets[i].states.read = fds[i].revents & POLLIN;
-		m_sockets[i].states.write = fds[i].revents & POLLOUT;
+		// m_sockets[i].states.write = fds[i].revents & POLLOUT; // XXX: Check if this is the right way
 		m_sockets[i].states.disconnect = fds[i].revents & POLLHUP;
 		m_sockets[i].states.error = fds[i].revents & POLLERR;
 	}
@@ -79,26 +79,44 @@ void Server::handleExistingConnections()
 {
 	for (int i = (int)m_sockets.size() - 1; i >= 0; i--)
 	{
+		// XXX: check if this is the right way
 		if (m_sockets[i].states.read)
 		{
 			Logger::Info("Reading data from client");
 			try
 			{
-				m_sockets[i].buffer << m_sockets[i].socket.receiveData();
-				if (m_sockets[i].buffer.str().empty()) continue;
+				std::string receivedData = m_sockets[i].socket.receiveData();
+				if (!receivedData.empty())
+				{
+					m_sockets[i].buffer << receivedData;
+
+					// Handle received data and decide if you need to send a response
+					m_sockets[i].buffer << "Test response\n"; // Store the response
+					m_sockets[i].states.write = true; // Mark as needing a response
+				}
 			}
-			catch(const std::runtime_error &e)
+			catch (const std::runtime_error& e)
 			{
 				Logger::Info("Erroneous packet data: " + std::string(e.what()));
-				// m_sockets.erase(m_sockets.begin() + i);
 				continue;
 			}
+		}
+		// XXX: check if this is the right way
+		if (m_sockets[i].states.write && !m_sockets[i].buffer.str().empty())
+		{
+			Logger::Info("Sending response to client");
+			m_sockets[i].socket.sendData(m_sockets[i].buffer.str());
+			m_sockets[i].states.write = false; // Reset the write state
+			m_sockets[i].buffer.clear(); // Clear the stored response
+			continue;
 		}
 		if (m_sockets[i].states.write)
 		{
 			Logger::Info("Sending response to client");
 			m_sockets[i].socket.sendData("Test response");
-			// m_sockets.erase(m_sockets.begin() + i);
+			m_sockets[i].states.write = false; // Reset the write state
+			m_sockets[i].buffer.str(""); // Clear the buffer after sending the response
+			m_sockets[i].buffer.clear(); // Clear any error flags
 
 			continue;
 		}
