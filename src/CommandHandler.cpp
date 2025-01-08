@@ -12,7 +12,7 @@ static std::vector<std::string> split(const std::string &str, char delim)
 	return tokens;
 }
 
-std::string CommandHandler::HandleCommand(std::string inCommand, Client & client, Server & server)
+std::string CommandHandler::HandleCommand(std::string inCommand, std::shared_ptr<Client> client, Server & server)
 {
 	std::vector<std::string> parts = split(inCommand, ' ');
 	int partsSize = parts.size();
@@ -22,10 +22,10 @@ std::string CommandHandler::HandleCommand(std::string inCommand, Client & client
 	if (parts[0] == "PASS") // AUTHENTICATE
 	{
 		if (partsSize != 2)
-			return std::string("Format: \"PASS <password>\".") + (client.isAuthenticated ? " You are authenticated. " : " You are not authenticated.");
+			return std::string("Format: \"PASS <password>\".") + (client->isAuthenticated ? " You are authenticated. " : " You are not authenticated.");
 		if (server.isCorrectPassword(parts[1]))
 		{
-			client.isAuthenticated = true;
+			client->isAuthenticated = true;
 			return "Authentication successful.";
 		}
 		return "Authentication failed.";
@@ -34,10 +34,10 @@ std::string CommandHandler::HandleCommand(std::string inCommand, Client & client
 	if (parts[0] == "OPER") // AUTHENTICATE AS OPERATOR
 	{
 		if (partsSize != 2)
-			return std::string("Format: \"OPER <operator password>\".") + (client.isOperator ? " You are an operator. " : " You are not an operator.");
+			return std::string("Format: \"OPER <operator password>\".") + (client->isOperator ? " You are an operator. " : " You are not an operator.");
 		if (server.isCorrectPassword(parts[1]))
 		{
-			client.isOperator = true;
+			client->isOperator = true;
 			return "Operator Authentication successful.";
 		}
 		return "Operator Authentication failed.";
@@ -46,16 +46,16 @@ std::string CommandHandler::HandleCommand(std::string inCommand, Client & client
 	else if (parts[0] == "NICK") // SET NICKNAME
 	{
 		if (partsSize != 2)
-			return std::string("Format: \"NICK <new nickname>\".") + (client.nickname.empty() ? " You currently don't have a nickname." : " Your current nickname is: \"" + client.nickname + "\".");
-		client.nickname = parts[1];
+			return std::string("Format: \"NICK <new nickname>\".") + (client->nickname.empty() ? " You currently don't have a nickname." : " Your current nickname is: \"" + client->nickname + "\".");
+		client->nickname = parts[1];
 		return "Your nickname is now \"" + parts[1] + "\".";
 	}
 
 	else if (parts[0] == "USER") // SET USERNAME
 	{
 		if (partsSize != 2)
-			return std::string("Format: \"NICK <new username>\".") + (client.username.empty() ? " You currently don't have a username." : " Your current username is: \"" + client.username + "\".");
-		client.username = parts[1];
+			return std::string("Format: \"NICK <new username>\".") + (client->username.empty() ? " You currently don't have a username." : " Your current username is: \"" + client->username + "\".");
+		client->username = parts[1];
 		return "Your username is now \"" + parts[1] + "\".";
 	}
 
@@ -63,10 +63,15 @@ std::string CommandHandler::HandleCommand(std::string inCommand, Client & client
 	{
 		if (partsSize < 2 || partsSize > 3)
 			return "Format: \"JOIN <channel name> <channel password if necessary>\"";
-		if (!client.isAuthenticated)
+		if (!client->isAuthenticated)
 			return "Please authenticate using PASS before joining a channel.";
 		
 		std::string channelName = parts[1];
+		Channel *channel = server.getChannel(channelName);
+		if (!channel)
+			server.createChannel(channelName);
+		else
+			channel->addMember(client);
 	}
 
 	return "Unrecognized command. Available commands: PASS, OPER, NICK, USER, JOIN, ";

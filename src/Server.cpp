@@ -32,7 +32,7 @@ void Server::updatePoll()
 	for (size_t i = 0; i < _sockets.size(); ++i)
 	{
 		struct pollfd pfd;
-		pfd.fd = _sockets[i].socket.getSocketFd();
+		pfd.fd = _sockets[i]->socket.getSocketFd();
 		pfd.events = POLLIN | POLLOUT | POLLHUP | POLLERR;
 		fds.push_back(pfd);
 	}
@@ -56,10 +56,10 @@ void Server::updatePoll()
 	_listening_socket.states.error = fds[fds.size() - 1].revents & POLLERR;
 	for (size_t i = 0; i < fds.size() - 1; i++)
 	{
-		_sockets[i].states.read = fds[i].revents & POLLIN;
-		_sockets[i].states.write = fds[i].revents & POLLOUT;
-		_sockets[i].states.disconnect = fds[i].revents & POLLHUP;
-		_sockets[i].states.error = fds[i].revents & POLLERR;
+		_sockets[i]->states.read = fds[i].revents & POLLIN;
+		_sockets[i]->states.write = fds[i].revents & POLLOUT;
+		_sockets[i]->states.disconnect = fds[i].revents & POLLHUP;
+		_sockets[i]->states.error = fds[i].revents & POLLERR;
 	}
 }
 
@@ -92,21 +92,21 @@ void Server::handleExistingConnections()
 {
 	for (int i = (int)_sockets.size() - 1; i >= 0; i--)
 	{
-		if (_sockets[i].states.disconnect || _sockets[i].states.error)
+		if (_sockets[i]->states.disconnect || _sockets[i]->states.error)
 		{
-			if (_sockets[i].states.disconnect)
+			if (_sockets[i]->states.disconnect)
 				Logger::Log(LogLevel::INFO, "Client disconnected");
 			else
 				Logger::Log(LogLevel::ERROR, "Error occurred on client socket: " + std::string(strerror(errno)));
 			_sockets.erase(_sockets.begin() + i);
 			continue;
 		}
-		if (_sockets[i].states.read)
+		if (_sockets[i]->states.read)
 		{
 			Logger::Log(LogLevel::INFO, "Reading data from client");
 			try
 			{
-				_sockets[i].inbuffer += _sockets[i].socket.receiveData();
+				_sockets[i]->inbuffer += _sockets[i]->socket.receiveData();
 			}
 			catch(const std::runtime_error &e)
 			{
@@ -116,13 +116,13 @@ void Server::handleExistingConnections()
 			}
 			HandleClientData(_sockets[i]);
 		}
-		if (_sockets[i].states.write && !_sockets[i].outbuffer.empty())
+		if (_sockets[i]->states.write && !_sockets[i]->outbuffer.empty())
 		{
 			Logger::Log(LogLevel::INFO, "Sending response to client");
 			try
 			{
-				_sockets[i].socket.sendData(_sockets[i].outbuffer);
-				_sockets[i].outbuffer.clear();
+				_sockets[i]->socket.sendData(_sockets[i]->outbuffer);
+				_sockets[i]->outbuffer.clear();
 			}
 			catch (const std::exception &e)
 			{
@@ -138,16 +138,16 @@ void Server::handleExistingConnections()
 /* ------ IRC LOGIC ------ */
 /* ----------------------- */
 
-void Server::HandleClientData(Client & client)
+void Server::HandleClientData(std::shared_ptr<Client> & client)
 {
 	// 1. get a line from the inbuffer, call commandhandler to generate a line for outbuffer
-	size_t newLinePos = client.inbuffer.find("\n");
+	size_t newLinePos = client->inbuffer.find("\n");
 	if (newLinePos == std::string::npos)
 		return;
-	std::string line = client.inbuffer.substr(0, newLinePos);
-	client.inbuffer.erase(0, newLinePos + 1);
+	std::string line = client->inbuffer.substr(0, newLinePos);
+	client->inbuffer.erase(0, newLinePos + 1);
 	std::string response = CommandHandler::HandleCommand(line, client, *this);
-	client.outbuffer += response + "\n";
+	client->outbuffer += response + "\n";
 }
 
 bool Server::isCorrectPassword(std::string passwordAttempt)
@@ -157,4 +157,17 @@ bool Server::isCorrectPassword(std::string passwordAttempt)
 bool Server::isCorrectOperatorPassword(std::string passwordAttempt)
 {
 	return passwordAttempt == _op_password;
+}
+
+Channel *Server::getChannel(std::string channelName)
+{
+	for (auto& channel_ptr : _channels)
+		if (channel_ptr.name == channelName)
+			return &channel_ptr;
+	return nullptr;
+}
+void Server::createChannel(std::string channelName)
+{
+	_channels.emplace_back(channelName);
+	Logger::Log(LogLevel::INFO, "Created new channel: " + channelName);
 }

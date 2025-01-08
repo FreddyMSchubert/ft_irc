@@ -17,3 +17,12 @@ Client& Client::operator=(Client&& other) noexcept
 	inbuffer = other.inbuffer;
 	return *this;
 }
+
+std::string Client::getName()
+{
+	if (!nickname.empty())
+		return nickname;
+	if (!username.empty())
+		return username;
+	return std::to_string(fd);
+}

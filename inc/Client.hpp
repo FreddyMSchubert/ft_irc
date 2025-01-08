@@ -30,4 +30,6 @@ class Client
 		bool isOperator = false;
 		std::string nickname = "";
 		std::string username = "";
+
+		std::string getName();
 };

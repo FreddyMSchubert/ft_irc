@@ -11,5 +11,5 @@ class Server; // forward declaration to avoid circular dependency
 class CommandHandler
 {
 	public:
-		static std::string HandleCommand(std::string inCommand, Client & client, Server & server);
+		static std::string HandleCommand(std::string inCommand, std::shared_ptr<Client> client, Server & server);
 };
