@@ -1,10 +1,11 @@
 NAME = ircserv
 
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++17
+CXXFLAGS = -g -std=c++17
 
-SRCS = bonus/Bot.cpp \
-	   bonus/FileTransfer.cpp
+# TODO: Add all source files
+SRCS = $(shell find ./src -name "*.cpp")
+HEADER = $(shell find ./inc -name "*.hpp")
 
 OBJDIR = obj
 OBJS = $(SRCS:%.cpp=$(OBJDIR)/%.o)
@@ -23,5 +24,8 @@ clean:
 
 fclean: clean
 	rm -f $(NAME)
+
+run: all
+	./$(NAME)
 
 re: fclean all
