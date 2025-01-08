@@ -5,14 +5,15 @@
 
 int main(int argc, char **argv)
 {
-	if (argc != 3)
+	if (argc != 4)
 	{
-		Logger::Log(LogLevel::ERROR, std::string("Incorrect arguments. Usage: ") + argv[0] + " <port> <password>");
+		Logger::Log(LogLevel::ERROR, std::string("Incorrect arguments. Usage: ") + argv[0] + " <port> <password> <operator password>");
 		return -1;
 	}
 
 	int port = -1;
 	std::string password = argv[2];
+	std::string opPassword = argv[3];
 	try
 	{
 		port = std::atoi(argv[1]);
@@ -26,7 +27,7 @@ int main(int argc, char **argv)
 		Logger::Log(LogLevel::ERROR, "Trouble parsing port");
 	}
 
-	Server cm(port);
+	Server cm(port, password, opPassword);
 	cm.Run();
 
 	return 0;

@@ -2,7 +2,7 @@
 #include "../inc/Socket.hpp"
 
 //Setup the listening socket and push it to the vector of sockets
-Server::Server(int port) : _port(port), _listening_socket{port}
+Server::Server(int port, std::string password, std::string op_password) : _port(port), _listening_socket(port), _password(password), _op_password(op_password)
 {
 	Logger::Log(LogLevel::INFO, "Server initialized on port " + std::to_string(port));
 }
@@ -146,6 +146,15 @@ void Server::HandleClientData(Client & client)
 		return;
 	std::string line = client.inbuffer.substr(0, newLinePos);
 	client.inbuffer.erase(0, newLinePos + 1);
-	std::string response = CommandHandler::HandleCommand(line, client);
+	std::string response = CommandHandler::HandleCommand(line, client, *this);
 	client.outbuffer += response + "\n";
+}
+
+bool Server::isCorrectPassword(std::string passwordAttempt)
+{
+	return passwordAttempt == _password;
+}
+bool Server::isCorrectOperatorPassword(std::string passwordAttempt)
+{
+	return passwordAttempt == _op_password;
 }

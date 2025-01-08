@@ -25,4 +25,9 @@ class Client
 		Client& operator=(const Client&) = delete;
 		Client(Client&& other) noexcept;
 		Client& operator=(Client&& other) noexcept;
+
+		bool isAuthenticated = false;
+		bool isOperator = false;
+		std::string nickname = "";
+		std::string username = "";
 };

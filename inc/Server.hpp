@@ -19,20 +19,24 @@ class Server
 		Client						_listening_socket;
 		std::vector<Client>			_sockets;
 
-		// Connections
+		std::string					_password;
+		std::string					_op_password;
+
 		void updatePoll();
 		void acceptNewConnections();
 		void handleExistingConnections();
 
-		// Irc Logic
 		void HandleClientData(Client & client);
 
 	public:
-		Server(int port);
+		Server(int port, std::string _password, std::string op_password);
 		Server(Server const &src) = delete;
 		Server &operator=(Server const &src) = delete;
 		Server(Server&& other) noexcept = default;
 		~Server() = default;
 		
 		void Run(); // Main Server loop
+
+		bool isCorrectPassword(std::string passwordAttempt);
+		bool isCorrectOperatorPassword(std::string passwordAttempt);
 };

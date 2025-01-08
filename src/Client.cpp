@@ -1,7 +1,7 @@
 #include "../inc/Client.hpp"
 
 Client::Client(int fd, Socket socket) // Client socket constructor
-	: socket(std::move(socket)), fd(fd), inbuffer() {}
+	: socket(std::move(socket)), fd(fd) {}
 Client::Client(int port) // Listening socket constructor
 	: socket(port), fd(socket.getSocketFd()) {}
 
