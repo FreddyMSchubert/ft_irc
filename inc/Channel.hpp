@@ -16,4 +16,5 @@ class Channel
 		std::string name = "";
 
 		void addMember(std::shared_ptr<Client> client);
+		void broadcast(std::string msg);
 };

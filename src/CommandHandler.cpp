@@ -29,6 +29,7 @@ std::string CommandHandler::HandleCommand(std::string inCommand, std::shared_ptr
 			return "Authentication successful.";
 		}
 		return "Authentication failed.";
+
 	}
 
 	if (parts[0] == "OPER") // AUTHENTICATE AS OPERATOR
@@ -54,11 +55,10 @@ std::string CommandHandler::HandleCommand(std::string inCommand, std::shared_ptr
 	else if (parts[0] == "USER") // SET USERNAME
 	{
 		if (partsSize != 2)
-			return std::string("Format: \"NICK <new username>\".") + (client->username.empty() ? " You currently don't have a username." : " Your current username is: \"" + client->username + "\".");
+			return std::string("Format: \"USER <new username>\".") + (client->username.empty() ? " You currently don't have a username." : " Your current username is: \"" + client->username + "\".");
 		client->username = parts[1];
 		return "Your username is now \"" + parts[1] + "\".";
 	}
-
 	else if (parts[0] == "JOIN") // JOIN OR CREATE A CHANNEL
 	{
 		if (partsSize < 2 || partsSize > 3)
@@ -69,10 +69,46 @@ std::string CommandHandler::HandleCommand(std::string inCommand, std::shared_ptr
 		std::string channelName = parts[1];
 		Channel *channel = server.getChannel(channelName);
 		if (!channel)
+		{
+			if (channelName[0] != '#')
+				return "Channel names must start with \"#\"";
 			server.createChannel(channelName);
+		}
 		else
 			channel->addMember(client);
+
+		return "You have joined " + channelName + ".";
 	}
 
-	return "Unrecognized command. Available commands: PASS, OPER, NICK, USER, JOIN, ";
+	else if (parts[0] == "PRIVMSG") // MESSAGE PEOPLE
+	{
+		if (partsSize < 3)
+			return "Format: \"PRIVMSG <channel name or person nickname> <message>";
+
+		std::string target = parts[1];
+		std::string msg = client->getName() + ": ";
+		for (size_t i = 2; i < parts.size(); i++)
+		{
+			msg += parts[i];
+			if (i < parts.size() - 1)
+				msg += " ";
+		}
+		msg += "\n";
+
+		if (target[0] == '#')
+		{
+			Channel *channel = server.getChannel(target);
+			if (!channel)
+				return ("Channel not found");
+			channel->broadcast(msg);
+		}
+		else
+		{
+			client->outbuffer += msg;
+		}
+
+		return "You have successfully messaged " + target + ".";
+	}
+
+	return "Unrecognized command. Available commands: PASS, OPER, NICK, USER, JOIN, MSG, ";
 }

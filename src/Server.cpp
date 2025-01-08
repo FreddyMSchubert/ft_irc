@@ -76,7 +76,7 @@ void Server::acceptNewConnections()
 		if (client_fd >= 0)
 		{
 			Logger::Log(LogLevel::INFO, "New client connected");
-			_sockets.emplace_back(client_fd, Socket(client_fd, _port));
+			_sockets.emplace_back(std::make_shared<Client>(client_fd, Socket(client_fd, _port)));
 			max_iterations--;
 		}
 		else
