@@ -1,5 +1,5 @@
 #include "../inc/Utils/Logger.hpp"
-#include "../inc/ConnectionManager.hpp"
+#include "../inc/Server.hpp"
 
 #include <string>
 
@@ -26,7 +26,7 @@ int main(int argc, char **argv)
 		Logger::Log(LogLevel::ERROR, "Trouble parsing port");
 	}
 
-	ConnectionManager cm(port);
+	Server cm(port);
 	cm.Run();
 
 	return 0;

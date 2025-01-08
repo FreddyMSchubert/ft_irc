@@ -1,17 +1,31 @@
-#include "../inc/ConnectionManager.hpp"
+#include "../inc/Server.hpp"
 #include "../inc/Socket.hpp"
 
 //Setup the listening socket and push it to the vector of sockets
-ConnectionManager::ConnectionManager(int port) : _port(port), _listening_socket{port}
+Server::Server(int port) : _port(port), _listening_socket{port}
 {
 	Logger::Log(LogLevel::INFO, "Server initialized on port " + std::to_string(port));
 }
+
+void Server::Run()
+{
+	while (42 == 42) // to exit program, please send sigint
+	{
+		updatePoll();
+		acceptNewConnections();
+		handleExistingConnections();
+	}
+}
+
+/* ----------------------- */
+/* ----- CONNECTIONS ----- */
+/* ----------------------- */
 
 // POLLIN    // Ready to read (incoming requests/data)
 // POLLOUT   // Ready to write (sending responses)
 // POLLHUP   // Client disconnected
 // POLLERR   // Error occurred
-void ConnectionManager::updatePoll()
+void Server::updatePoll()
 {
 	// Create pollfds for poll call
 	std::vector<struct pollfd> fds;
@@ -49,7 +63,7 @@ void ConnectionManager::updatePoll()
 	}
 }
 
-void ConnectionManager::acceptNewConnections()
+void Server::acceptNewConnections()
 {
 	if (!_listening_socket.states.read)
 		return;
@@ -74,7 +88,7 @@ void ConnectionManager::acceptNewConnections()
 	}
 }
 
-void ConnectionManager::handleExistingConnections()
+void Server::handleExistingConnections()
 {
 	for (int i = (int)_sockets.size() - 1; i >= 0; i--)
 	{
@@ -92,7 +106,7 @@ void ConnectionManager::handleExistingConnections()
 			Logger::Log(LogLevel::INFO, "Reading data from client");
 			try
 			{
-				_sockets[i].buffer += _sockets[i].socket.receiveData();
+				_sockets[i].inbuffer += _sockets[i].socket.receiveData();
 			}
 			catch(const std::runtime_error &e)
 			{
@@ -100,46 +114,38 @@ void ConnectionManager::handleExistingConnections()
 				_sockets.erase(_sockets.begin() + i);
 				continue;
 			}
+			HandleClientData(_sockets[i]);
 		}
-		if (_sockets[i].states.write)
+		if (_sockets[i].states.write && !_sockets[i].outbuffer.empty())
 		{
-			// send somethin back
-
-			// Logger::Log(LogLevel::INFO, "Determining response to client");
-			// Request req(_sockets[i].buffer.str());
-			// Response res(req, _config);
-
-			// std::vector<t_location> locations = get_locations(_config, req.getPath());
-			// for (const auto & loc : locations)
-			// 	if (!loc.redirections.empty())
-			// 		_sockets[i].socket.redirectToOtherResource(loc.redirections[0].second, loc.redirections[0].first);
-
-			// Logger::Log(LogLevel::INFO, _config.getServerId(), "Sending response to client");
-			// try
-			// {
-			// 	std::cout << (res.getStatus() == Status::OK) << std::endl;
-			// 	if (res.getStatus() != Status::OK)
-			// 		_sockets[i].socket.redirectToError(res.getStatus());
-			// 	else
-			// 		_sockets[i].socket.sendData(res.getRawPacket());
-			// }
-			// catch (const std::exception &e)
-			// {
-			// 	Logger::Log(LogLevel::ERROR, _config.getServerId(), "Failed to send response: " + std::string(e.what()));
-			// }
-			// Logger::Log(LogLevel::INFO, _config.getServerId(), "Response sent to client");
-			// _sockets.erase(_sockets.begin() + i);
-			// continue;
+			Logger::Log(LogLevel::INFO, "Sending response to client");
+			try
+			{
+				_sockets[i].socket.sendData(_sockets[i].outbuffer);
+				_sockets[i].outbuffer.clear();
+			}
+			catch (const std::exception &e)
+			{
+				Logger::Log(LogLevel::ERROR, "Failed to send response: " + std::string(e.what()));
+			}
+			Logger::Log(LogLevel::INFO, "Response sent to client");
+			continue;
 		}
 	}
 }
 
-void ConnectionManager::Run()
+/* ----------------------- */
+/* ------ IRC LOGIC ------ */
+/* ----------------------- */
+
+void Server::HandleClientData(Client & client)
 {
-	while (42 == 42) // to exit program, please send sigint
-	{
-		updatePoll();
-		acceptNewConnections();
-		handleExistingConnections();
-	}
+	// 1. get a line from the inbuffer, call commandhandler to generate a line for outbuffer
+	size_t newLinePos = client.inbuffer.find("\n");
+	if (newLinePos == std::string::npos)
+		return;
+	std::string line = client.inbuffer.substr(0, newLinePos);
+	client.inbuffer.erase(0, newLinePos + 1);
+	std::string response = CommandHandler::HandleCommand(line, client);
+	client.outbuffer += response + "\n";
 }
