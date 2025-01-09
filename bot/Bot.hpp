@@ -13,7 +13,6 @@ class Server;
 
 //TODO: make listening-sockets (copy from src)
 //TODO: make server (copy from src)
-//TODO: make a Makefile
 
 class Bot
 {
