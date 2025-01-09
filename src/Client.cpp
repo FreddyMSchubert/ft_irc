@@ -44,7 +44,7 @@ std::string Client::getName()
 		return nickname;
 	if (!username.empty())
 		return username;
-	return std::to_string(fd);
+	return std::string("User_") + std::to_string(id);
 }
 
 bool Client::isOperatorIn(Channel * channel)

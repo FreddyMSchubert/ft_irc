@@ -282,5 +282,15 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 		return "Mode set.";
 	}
 
-	return "Unrecognized command. Available commands: PASS, OPER, NICK, USER, JOIN, PRIVMSG / MSG, KICK, INVITE, TOPIC, MODE";
+	else if (parts[0] == "USERS")
+	{
+		// log all users
+		std::string response = "Users:\n";
+		for (auto &c : server.getClients())
+			response += "- " + c.getName() + " (id" + std::to_string(c.id) + ")\n";
+		response.pop_back();
+		return response;
+	}
+
+	return "Unrecognized command. Available commands: PASS, OPER, NICK, USER, JOIN, PRIVMSG / MSG, KICK, INVITE, TOPIC, MODE, USERS";
 }
