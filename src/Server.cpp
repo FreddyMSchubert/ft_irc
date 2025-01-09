@@ -152,7 +152,7 @@ void Server::HandleClientData(unsigned int clientId)
 	client->inbuffer.erase(0, newLinePos + 1);
 	std::string response = CommandHandler::HandleCommand(line, clientId, *this);
 	if (!response.empty())
-		client->outbuffer += response + "\n";
+		client->sendMessage(response + "\n");
 }
 
 Client * Server::getClientById(unsigned int id)

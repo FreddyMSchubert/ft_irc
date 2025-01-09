@@ -30,6 +30,11 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 			return std::string("Format: \"PASS <password>\".") + (client.isAuthenticated ? " You are authenticated. " : " You are not authenticated.");
 		if (client.isAuthenticated)
 			return "You are already authenticated.";
+		if (client.username.empty())
+			return "Please set a username using USER before authenticating.";
+		if (client.nickname.empty())
+			return "Please set a nickname using NICK before authenticating.";
+
 		if (server.isCorrectPassword(parts[1]))
 		{
 			client.isAuthenticated = true;
@@ -45,6 +50,11 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 			return std::string("Format: \"OPER <operator password>\".") + (client.isOperator ? " You are an operator. " : " You are not an operator.");
 		if (client.isOperator)
 			return "You are already an operator.";
+		if (client.username.empty())
+			return "Please set a username using USER before authenticating.";
+		if (client.nickname.empty())
+			return "Please set a nickname using NICK before authenticating.";
+
 		if (server.isCorrectOperatorPassword(parts[1]))
 		{
 			client.isOperator = true;
@@ -60,6 +70,10 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 			return std::string("Format: \"NICK <new nickname>\".") + (client.nickname.empty() ? " You currently don't have a nickname." : " Your current nickname is: \"" + client.nickname + "\".");
 		if (parts[1][0] == '#')
 			return "Nicknames can't start with \"#\"";
+
+		for (auto &c : server.getClients())
+			if (c.nickname == parts[1])
+				return "Nickname already in use.";
 		client.nickname = parts[1];
 		return "Your nickname is now \"" + parts[1] + "\".";
 	}
@@ -68,6 +82,12 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 	{
 		if (partsSize != 2)
 			return std::string("Format: \"USER <new username>\".") + (client.username.empty() ? " You currently don't have a username." : " Your current username is: \"" + client.username + "\".");
+		if (parts[1][0] == '#')
+			return "Usernames can't start with \"#\"";
+
+		for (auto &c : server.getClients())
+			if (c.username == parts[1])
+				return "Username already in use.";
 		client.username = parts[1];
 		return "Your username is now \"" + parts[1] + "\".";
 	}
@@ -136,10 +156,18 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 		}
 		else if (target != client.nickname)
 		{
+			std::cout << "Sending message to " << target << std::endl;
 			std::vector<Client> &clients = server.getClients();
 			for (auto &c : clients)
+			{
+				std::cout << "Checking " << c.nickname << std::endl;
 				if (c.nickname == target)
-					c.outbuffer += msg;
+				{
+					if (!c.isAuthenticated)
+						return "Message not sent. The target is not authenticated.";
+					c.sendMessage(msg);
+				}
+			}
 		}
 
 		return std::string();
@@ -163,7 +191,7 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 		channel->kick(clientIdToKick, server);
 
 		if (server.getClientById(clientIdToKick))
-			server.getClientById(clientIdToKick)->outbuffer += "You have been kicked from " + channel->name + ".\n";
+			server.getClientById(clientIdToKick)->sendMessage("You have been kicked from " + channel->name + ".\n");
 		return "Kicked " + userToKick + " from " + channel->name + ".";
 	}
 
@@ -190,7 +218,7 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 				return "Invited " + userToInvite + " to " + channel->name + ". Be warned that they are not authenticated.";
 
 		if (server.getClientById(clientIdToInvite))
-			server.getClientById(clientIdToInvite)->outbuffer += "You have been invited to " + channel->name + ".\n";
+			server.getClientById(clientIdToInvite)->sendMessage("You have been invited to " + channel->name + ".\n");
 		return "Invited " + userToInvite + " to " + channel->name + ".";
 	}
 

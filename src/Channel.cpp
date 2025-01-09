@@ -32,7 +32,7 @@ void Channel::broadcast(std::string msg, Server &server, unsigned int except_id)
 		{
 			Client* client = server.getClientById(clientId);
 			if (client)
-				client->outbuffer += msg;
+				client->sendMessage(msg);
 		}
 	}
 }

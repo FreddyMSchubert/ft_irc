@@ -53,3 +53,8 @@ bool Client::isOperatorIn(Channel * channel)
 		return isOperator;
 	return isOperator || channel->isOperator(id);
 }
+
+void Client::sendMessage(std::string msg)
+{
+	outbuffer += msg;
+}

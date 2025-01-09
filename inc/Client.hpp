@@ -37,4 +37,5 @@ class Client
 
 		std::string getName();
 		bool isOperatorIn(Channel *channel);
+		void sendMessage(std::string msg);
 };
