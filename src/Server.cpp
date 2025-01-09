@@ -27,7 +27,7 @@ void Server::updatePoll()
 	fds.push_back(listen_pfd);
 
 	// poll
-	int ret = poll(fds.data(), fds.size(), 0);
+	int ret = poll(fds.data(), fds.size(), 50);
 	if (ret < 0)
 	{
 		Logger::Error("Poll error: " + std::string(strerror(errno)) + " -> means that there is no data to read.");
@@ -79,29 +79,6 @@ void Server::handleExistingConnections()
 {
 	for (int i = (int)m_sockets.size() - 1; i >= 0; i--)
 	{
-		if (m_sockets[i].states.read)
-		{
-			Logger::Info("Reading data from client");
-			try
-			{
-				m_sockets[i].buffer << m_sockets[i].socket.receiveData();
-				if (m_sockets[i].buffer.str().empty()) continue;
-			}
-			catch(const std::runtime_error &e)
-			{
-				Logger::Info("Erroneous packet data: " + std::string(e.what()));
-				// m_sockets.erase(m_sockets.begin() + i);
-				continue;
-			}
-		}
-		if (m_sockets[i].states.write)
-		{
-			Logger::Info("Sending response to client");
-			m_sockets[i].socket.sendData("Test response");
-			// m_sockets.erase(m_sockets.begin() + i);
-
-			continue;
-		}
 		if (m_sockets[i].states.disconnect || m_sockets[i].states.error)
 		{
 			if (m_sockets[i].states.disconnect)
@@ -109,6 +86,49 @@ void Server::handleExistingConnections()
 			else
 				Logger::Info("Error occurred on client socket: " + std::string(strerror(errno)));
 			m_sockets.erase(m_sockets.begin() + i);
+			continue;
+		}
+		// XXX: check if this is the right way
+		if (m_sockets[i].states.read)
+		{
+			Logger::Info("Reading data from client");
+			try
+			{
+				std::string receivedData = m_sockets[i].socket.receiveData();
+				if (!receivedData.empty())
+				{
+					m_sockets[i].buffer << receivedData;
+
+					// TODO: HANDLE RESPONSE line by line & clear buffer of what was computed
+					// populate datatosend
+					// find new line, remove data from buffer until newline, send back data until new line in reverse
+					std::string line;
+					while (std::getline(m_sockets[i].buffer, line))
+					{
+						// verify empty or whitespace
+						if (line.empty() || line == "\n" || line == "\r\n" || line == "\r")
+							continue;
+						Logger::Info("Received line: " + line);
+						m_sockets[i].dataToSend = line;
+						break;
+					}
+					// reverse line
+					std::reverse(m_sockets[i].dataToSend.begin(), m_sockets[i].dataToSend.end());
+				}
+			}
+			catch (const std::runtime_error& e)
+			{
+				Logger::Info("Erroneous message data: " + std::string(e.what()));
+				continue;
+			}
+		}
+		// XXX: check if this is the right way
+		if (m_sockets[i].states.write && !m_sockets[i].buffer.str().empty() && !m_sockets[i].dataToSend.empty())
+		{
+			Logger::Info("Sending response to client");
+			m_sockets[i].socket.sendData(m_sockets[i].dataToSend);
+			m_sockets[i].dataToSend.clear();
+			continue;
 		}
 	}
 }
@@ -121,4 +141,17 @@ void Server::Run()
 		acceptNewConnections();
 		handleExistingConnections();
 	}
+}
+
+void Server::sendMessage(int fd, const std::string &msg)
+{
+	for (size_t i = 0; i < m_sockets.size(); i++)
+	{
+		if (m_sockets[i].fd == fd)
+		{
+			m_sockets[i].dataToSend = msg;
+			return;
+		}
+	}
+	Logger::Error("Could not find socket with fd: " + std::to_string(fd));
 }

@@ -7,6 +7,7 @@
 
 int main(int argc , char *argv[])
 {
+	// TODO: get pwd and port from argv
 	Server server(LOCALHOST, DEFAULT_PORT, "123");
 	server.Run();
 	return 0;
