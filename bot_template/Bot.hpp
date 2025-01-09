@@ -1,18 +1,38 @@
 #pragma once
 
 #include <iostream>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <arpa/inet.h>
+#include <vector>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <vector>
+#include <poll.h>
+#include <cstring>
+#include <algorithm>
+#include <exception>
+#include <string>
 
 enum class EventType
 {
+	NONE,
 	ON_MESSAGE,
 	ON_DICONNECT,
-	ON_CONNECT
+	ON_CONNECT,
+	ON_ERROR
 };
 
 class Socket
 {
 	private:
-		using EventCallback = void(*)(std::string message);
+		typedef std::function<void(std::string)> EventCallback;
 		struct Event
 		{
 			EventType type;
@@ -21,16 +41,24 @@ class Socket
 
 		std::string				_socket_ip;
 		int						_socket_port;
-		std::vector<Event>()	_events;
+		std::vector<Event>		_events;
+
+		int _socket_fd = -1;
+		struct sockaddr_in _socket;
 
 		void executeEventsOfType(EventType type);
-
+		void setNonBlocking();
+		void executeEventsOfType(EventType type, std::string message);
 	public:
 		Socket();
 		~Socket();
 
-		void addEventListener();
+		void connectToServer(std::string ip, int port);
+
+		void addEventListener(EventType type, EventCallback callback);
 		void sendMessage(std::string msg);
+
+		void Run();
 
 };
 
@@ -50,13 +78,21 @@ class Bot
 		Socket socket;
 
 	public:
-		Bot(std::string ip, int port, std::string password);
+		Bot(std::string ip, int port, std::string password, std::string nick, std::string user);
 		~Bot();
 
+		void connectToServer();
 		void authenticate();
 		void directMessage(std::string user, std::string msg);
 		void sendMessage(std::string msg);
-		void sendMessage(std::string msg, std::string channelname);
+		void sendMessage(std::string channelname, std::string msg);
 		void changeChannel(std::string channelname);
 		void changeChannel(std::string channelname, std::string password);
+
+		void onMessage(std::string message);
+		void onDisconnect(std::string message);
+		void onConnect(std::string message);
+		void onError(std::string message);
+
+		void Run();
 };
