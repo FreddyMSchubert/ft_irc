@@ -100,13 +100,13 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 			server.createChannel(channelName);
 			channel = server.getChannel(channelName);
 		}
-		channel->addMember(clientId, server);
+		std::string channelJoinReturn = channel->addMember(clientId, server);
 		client.channel = channel;
 
-		return "You have joined " + channelName + ".";
+		return channelJoinReturn;
 	}
 
-	else if (parts[0] == "PRIVMSG") // MESSAGE PEOPLE
+	else if (parts[0] == "PRIVMSG" || parts[0] == "MSG") // MESSAGE PEOPLE
 	{
 		if (!client.isAuthenticated)
 			return "Please authenticate using PASS before messaging people.";
@@ -163,5 +163,32 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 		return "Kicked " + userToKick + " from " + channel->name + ".";
 	}
 
-	return "Unrecognized command. Available commands: PASS, OPER, NICK, USER, JOIN, MSG, ";
+	else if (parts[0] == "INVITE")
+	{
+		if (parts.size() != 3)
+			return "Format: \"INVITE <channel name> <client nickname>\"";
+		Channel *channel = server.getChannel(parts[1]);
+		if (!channel)
+			return "Channel not found";
+		if (!client.isOperator)
+			return "You must be an operator to invite someone.";
+
+		std::string userToInvite = parts[2];
+		unsigned int clientIdToInvite = 0;
+		for (auto &c : server.getClients())
+			if (c.nickname == userToInvite)
+				clientIdToInvite = c.id;
+		channel->unkick(clientIdToInvite);
+		channel->addMember(clientIdToInvite, server);
+
+		if (server.getClientById(clientIdToInvite))
+			if (!server.getClientById(clientIdToInvite)->isAuthenticated)
+				return "Invited " + userToInvite + " to " + channel->name + ". Be warned that they are not authenticated.";
+
+		if (server.getClientById(clientIdToInvite))
+			server.getClientById(clientIdToInvite)->outbuffer += "You have been invited to " + channel->name + ".\n";
+		return "Invited " + userToInvite + " to " + channel->name + ".";
+	}
+
+	return "Unrecognized command. Available commands: PASS, OPER, NICK, USER, JOIN, PRIVMSG / MSG, KICK, INVITE";
 }

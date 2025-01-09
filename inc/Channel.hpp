@@ -17,9 +17,11 @@ class Channel
 		Channel(std::string name);
 
 		std::string name = "";
+		bool inviteOnly = false;
 
-		void addMember(unsigned int client, Server &server);
+		std::string addMember(unsigned int client, Server &server, bool wasInvited = false);
 		void broadcast(std::string msg, Server &server, unsigned int except_id = -1);
 		void removeClient(unsigned int clientId, Server &server);
 		void kick(unsigned int clientId, Server &server);
+		void unkick(unsigned int clientId);
 };
