@@ -41,7 +41,6 @@ Bot::~Bot()
 void Bot::connectToServer()
 {
 	socket = new Socket(*this);
-
 	if (!socket)
 		throw std::runtime_error("Failed to create socket");
 
@@ -66,34 +65,56 @@ void Bot::authenticate()
 
 void Bot::directMessage(std::string user, std::string msg)
 {
-	socket->queueMessage("PRIVMSG " + user + " :" + msg);
+	if (socket)
+		socket->queueMessage("PRIVMSG " + user + " :" + msg);
+	else
+		std::cerr << "Error: Socket not initialized" << std::endl;
 }
 
 void Bot::sendRawMessage(std::string msg)
 {
-	socket->queueMessage(msg);
+	if (socket)
+		socket->queueMessage(msg);
+	else
+		std::cerr << "Error: Socket not initialized" << std::endl;
 }
 
 void Bot::sendMessage(std::string msg)
 {
-	socket->queueMessage("PRIVMSG " + _current_channel + " :" + msg);
+	if (socket)
+		socket->queueMessage("PRIVMSG " + _current_channel + " :" + msg);
+	else
+		std::cerr << "Error: Socket not initialized" << std::endl;
 }
 
 void Bot::sendMessage(std::string channelname, std::string msg)
 {
-	socket->queueMessage("PRIVMSG " + channelname + " :" + msg);
+	if (socket)
+		socket->queueMessage("PRIVMSG " + channelname + " :" + msg);
+	else
+		std::cerr << "Error: Socket not initialized" << std::endl;
 }
 
 void Bot::changeChannel(std::string channel)
 {
-	_current_channel = channel;
-	socket->queueMessage("JOIN " + channel);
+	if (socket)
+	{
+		socket->queueMessage("JOIN " + channel);
+		_current_channel = channel;
+	}
+	else
+		std::cerr << "Error: Socket not initialized" << std::endl;
 }
 
 void Bot::changeChannel(std::string channel, std::string password)
 {
-	_current_channel = channel;
-	socket->queueMessage("JOIN " + channel + " " + password);
+	if (socket)
+	{
+		socket->queueMessage("JOIN " + channel + " " + password);
+		_current_channel = channel;
+	}
+	else
+		std::cerr << "Error: Socket not initialized" << std::endl;
 }
 
 void Bot::setCallbacks(onConnectCallback onConnect,
