@@ -19,45 +19,48 @@
 #include <algorithm>
 #include <exception>
 #include <string>
+#include <functional>
 
-enum class EventType
-{
-	NONE,
-	ON_MESSAGE,
-	ON_DISCONNECT,
-	ON_CONNECT,
-	ON_ERROR
-};
+class Bot;
+
+typedef std::function<void(std::string, std::string, std::string, Bot&)> onMessageCallback; //channel, user, message, botRef
+typedef std::function<void(Bot&)> onDisconnectCallback;
+typedef std::function<void(Bot&)> onConnectCallback;
+typedef std::function<void(std::string, Bot&)> onErrorCallback;
 
 class Socket
 {
 	private:
-		typedef std::function<void(std::string)> EventCallback;
-		struct Event
-		{
-			EventType type;
-			EventCallback callback;
-		};
+		onDisconnectCallback		_onDisconnectCallback = nullptr;
+		onMessageCallback			_onMessageCallback = nullptr;
+		onConnectCallback			_onConnectCallback = nullptr;
+		onErrorCallback				_onErrorCallback = nullptr;
 
-		std::string				_socket_ip;
-		int						_socket_port;
-		std::vector<Event>		_events;
-		std::vector<std::string> _messages;
+		std::string					_socket_ip;
+		int							_socket_port;
+		std::vector<std::string>	_messages;
+
+		Bot &_botRef;
 
 		int _socket_fd = -1;
 		struct sockaddr_in _socket;
 		bool running = true;
+		bool error = false;
 
 		void setNonBlocking();
-		void executeEventsOfType(EventType type, std::string message);
 		void sendMessage(std::string msg);
+
 	public:
-		Socket();
+		Socket(Bot &bot);
 		~Socket();
 
 		void connectToServer(std::string ip, int port);
 
-		void addEventListener(EventType type, EventCallback callback);
+		void setOnMessageCallback(onMessageCallback callback) { _onMessageCallback = callback; };
+		void setOnDisconnectCallback(onDisconnectCallback callback) { _onDisconnectCallback = callback; };
+		void setOnConnectCallback(onConnectCallback callback) { _onConnectCallback = callback; };
+		void setOnErrorCallback(onErrorCallback callback) { _onErrorCallback = callback; };
+
 		void queueMessage(std::string msg);
 
 		void Run();
@@ -77,7 +80,7 @@ class Bot
 		std::string	_user = "bot";
 
 		//socket
-		Socket socket;
+		Socket *socket = nullptr;
 
 	public:
 		Bot(std::string ip, int port, std::string password, std::string nick, std::string user);
@@ -92,8 +95,8 @@ class Bot
 		void changeChannel(std::string channelname);
 		void changeChannel(std::string channelname, std::string password);
 
-		void onMessage(std::string message);
-		void onDisconnect(std::string message);
-		void onConnect(std::string message);
-		void onError(std::string message);
+		void setCallbacks(onConnectCallback onConnect,
+					onErrorCallback onError,
+					onMessageCallback onMessage,
+					onDisconnectCallback onDisconnect);
 };

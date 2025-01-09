@@ -1,13 +1,18 @@
 #include "Bot.hpp"
 #include <stdexcept>
 
-Socket::Socket()
+Socket::Socket(Bot &bot) : _botRef(bot)
 {
 	_socket_ip = "";
 	_socket_port = -1;
 }
 
-Socket::~Socket() { }
+Socket::~Socket()
+{
+	if (!error)
+		this->sendMessage("QUIT");
+	close(_socket_fd);
+}
 
 void Socket::setNonBlocking()
 {
@@ -47,7 +52,7 @@ void Socket::connectToServer(std::string ip, int port)
 			if (errno != EINPROGRESS)
 			{
 				close(_socket_fd);
-				executeEventsOfType(EventType::ON_ERROR, std::string(strerror(errno)));
+				_onErrorCallback("Failed to connect to server: " + std::string(strerror(errno)), _botRef);
 				throw std::runtime_error("Failed to connect to server: " + std::string(strerror(errno)));
 			}
 		}
@@ -60,16 +65,12 @@ void Socket::connectToServer(std::string ip, int port)
 	{
 		throw std::runtime_error(e.what());
 	}
-	executeEventsOfType(EventType::ON_CONNECT, "Connected to server");
-}
-
-void Socket::addEventListener(EventType type, EventCallback callback)
-{
-	_events.push_back({type, callback});
+	_onConnectCallback(_botRef);
 }
 
 void Socket::queueMessage(std::string msg)
 {
+	std::cout << "Queuing message: " << msg << std::endl;
 	_messages.emplace_back(msg);
 }
 
@@ -80,33 +81,16 @@ void Socket::sendMessage(std::string msg)
 	{
 		if (errno == EPIPE)
 		{
-			std::cerr << "Error: Broken pipe (EPIPE) - Disconnected from server" << std::endl;
-			executeEventsOfType(EventType::ON_DISCONNECT, "Disconnected from server");
+			_onErrorCallback("Server closed the connection already. Unable to send message", _botRef);
 			running = false;
 		}
 		else
-		{
-			std::cerr << "Error: Failed to send message: " << strerror(errno) << std::endl;
-			executeEventsOfType(EventType::ON_ERROR, "Failed to send message");
-		}
+			_onErrorCallback("Failed to send message", _botRef);
 	}
 	else if (sent < msg.length())
-	{
 		std::cerr << "Warning: Partial message sent: " << sent << " of " << msg.length() << " bytes" << std::endl;
-	}
 	else
-	{
 		std::cout << "Message sent successfully: " << msg << std::endl;
-	}
-}
-
-void Socket::executeEventsOfType(EventType type, std::string msg)
-{
-	for (auto &event : _events)
-	{
-		if (event.type == type)
-			event.callback(msg);
-	}
 }
 
 void Socket::Run()
@@ -120,54 +104,43 @@ void Socket::Run()
 
 	while (running)
 	{
-		int ret = poll(fds, 1, 1000);
+		int ret = poll(fds, 1, 50);
 		if (ret == -1)
-		{
-			executeEventsOfType(EventType::ON_ERROR, "Poll error: " + std::string(strerror(errno)));
-		}
-		else if (ret == 0)
-		{
-			std::cout << "Poll timeout, no events" << std::endl;
-		}
+			_onErrorCallback("Poll error: " + std::string(strerror(errno)), _botRef);
 		else if (ret > 0)
 		{
 			if (fds[0].revents & POLLIN)
 			{
-				std::cout << "POLLIN event detected" << std::endl;
+				std::cout << "Message received from Socket:" << std::endl;
 				char buffer[1024] = {0};
 				std::memset(buffer, 0, sizeof(buffer));
-				int valread = read(_socket_fd, buffer, sizeof(buffer) - 1);
+				int valread = read(fds[0].fd, buffer, sizeof(buffer) - 1);
 				if (valread == 0)
 				{
-					std::cerr << "Server closed the connection" << std::endl;
-					executeEventsOfType(EventType::ON_DISCONNECT, "Disconnected from server");
+					std::cerr << "-> Server closed the connection" << std::endl;
+					_onDisconnectCallback(_botRef);
 					break;
 				}
 				else if (valread < 0)
 				{
-					std::cerr << "Read error: " << strerror(errno) << std::endl;
-					executeEventsOfType(EventType::ON_ERROR, "Read error: " + std::string(strerror(errno)));
+					std::cerr << "-> Read error: " << strerror(errno) << std::endl;
+					_onErrorCallback("Read error: " + std::string(strerror(errno)), _botRef);
 				}
 				else
 				{
-					std::cout << "Data read from server: " << buffer << std::endl;
-					executeEventsOfType(EventType::ON_MESSAGE, std::string(buffer));
+					std::cout << "-> Data read from server: " << buffer << std::endl;
+					// TODO: Parse message and call onMessageCallback
+					_onMessageCallback("TestUser", "TestChannel", std::string(buffer), _botRef);
 				}
 			}
 			if (fds[0].revents & POLLOUT)
 			{
-				std::cout << "POLLOUT event detected" << std::endl;
+				std::cout << "Sending next message in queue!" << std::endl;
 				if (!_messages.empty())
 				{
 					sendMessage(_messages.front());
 					_messages.erase(_messages.begin());
 				}
-			}
-			if (fds[0].revents & (POLLERR | POLLHUP | POLLNVAL))
-			{
-				std::cerr << "Poll error event detected: " << fds[0].revents << std::endl;
-				executeEventsOfType(EventType::ON_ERROR, "Poll error event detected");
-				break;
 			}
 		}
 	}

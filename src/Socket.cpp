@@ -93,6 +93,7 @@ std::string Socket::receiveData()
 	char buffer[512];
 	ssize_t received;
 
+	Logger::Log(LogLevel::INFO, "Receiving data...");
 	received = recv(_socket_fd, buffer, sizeof(buffer), 0);
 	if (received > 0)
 		data.append(buffer, received);

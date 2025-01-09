@@ -2,3 +2,5 @@
 .vscode
 ircserv
 obj/
+bot_template/bot/
+bot_template

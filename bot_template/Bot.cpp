@@ -3,6 +3,11 @@
 #include <stdexcept>
 #include <unistd.h>
 
+void onMessage(std::string user, std::string channel, std::string message, Bot& bot);
+void onDisconnect(std::string reason, Bot& bot);
+void onConnect(std::string server, Bot &bot);
+void onError(std::string message, Bot &bot);
+
 Bot::Bot(std::string ip, int port, std::string password, std::string nick, std::string user)
 {
 	if (ip.empty() || port <= 0)
@@ -24,25 +29,26 @@ Bot::Bot(std::string ip, int port, std::string password, std::string nick, std::
 		_nick = nick;
 	if (!user.empty())
 		_user = user;
-
-	socket.addEventListener(EventType::ON_CONNECT, std::bind(&Bot::onConnect, this, std::placeholders::_1));
-	socket.addEventListener(EventType::ON_ERROR, std::bind(&Bot::onError, this, std::placeholders::_1));
-	socket.addEventListener(EventType::ON_MESSAGE, std::bind(&Bot::onMessage, this, std::placeholders::_1));
-	socket.addEventListener(EventType::ON_DISCONNECT, std::bind(&Bot::onDisconnect, this, std::placeholders::_1));
 }
 
 Bot::~Bot()
 {
-	socket.queueMessage("QUIT");
+	// socket.queueMessage("QUIT");
+	if (socket)
+		delete socket;
 }
 
 void Bot::connectToServer()
 {
+	socket = new Socket(*this);
+
+	if (!socket)
+		throw std::runtime_error("Failed to create socket");
+
 	try {
-		socket.connectToServer(this->_ip, this->_port);
+		socket->connectToServer(this->_ip, this->_port);
 	} catch (std::exception& e) {
-		std::cerr << "Socket: Failed to connect to IRC Server: " << e.what() << std::endl;
-		throw std::runtime_error("Failed to connect to IRC Server");
+		throw std::runtime_error(std::string(e.what()));
 	} 
 }
 
@@ -52,70 +58,51 @@ void Bot::authenticate()
 	std::cout << "\tPASS: " << _password << std::endl;
 	std::cout << "\tNICK: " << _nick << std::endl;
 	std::cout << "\tUSER: " << _user << std::endl;
-	sendRawMessage("PASS " + _password);
-	sleep(1);
-	sendRawMessage("NICK " + _nick);
-	sleep(1);
-	sendRawMessage("USER bot" + _user);
-	sleep(1);
+
+	sendRawMessage("PASS " + _password + "\r\n");
+	sendRawMessage("NICK " + _nick + "\r\n");
+	sendRawMessage("USER bot" + _user+ "\r\n");
 }
 
 void Bot::directMessage(std::string user, std::string msg)
 {
-	socket.queueMessage("PRIVMSG " + user + " :" + msg);
+	socket->queueMessage("PRIVMSG " + user + " :" + msg);
 }
 
 void Bot::sendRawMessage(std::string msg)
 {
-	socket.queueMessage(msg);
+	socket->queueMessage(msg);
 }
 
 void Bot::sendMessage(std::string msg)
 {
-	socket.queueMessage("PRIVMSG " + _current_channel + " :" + msg);
+	socket->queueMessage("PRIVMSG " + _current_channel + " :" + msg);
 }
 
 void Bot::sendMessage(std::string channelname, std::string msg)
 {
-	socket.queueMessage("PRIVMSG " + channelname + " :" + msg);
+	socket->queueMessage("PRIVMSG " + channelname + " :" + msg);
 }
 
 void Bot::changeChannel(std::string channel)
 {
 	_current_channel = channel;
-	socket.queueMessage("JOIN " + channel);
+	socket->queueMessage("JOIN " + channel);
 }
 
 void Bot::changeChannel(std::string channel, std::string password)
 {
 	_current_channel = channel;
-	socket.queueMessage("JOIN " + channel + " " + password);
+	socket->queueMessage("JOIN " + channel + " " + password);
 }
 
-void Bot::onConnect(std::string message)
+void Bot::setCallbacks(onConnectCallback onConnect,
+					onErrorCallback onError,
+					onMessageCallback onMessage,
+					onDisconnectCallback onDisconnect)
 {
-	(void)message;
-	std::cout << "Connected to IRC Server\n" << std::endl;
-	try {
-		this->authenticate();
-	} catch (std::exception& e) {
-		std::cerr << "Failed to authenticate: " << e.what() << std::endl;
-	}
-	socket.Run();
-}
-
-void Bot::onError(std::string message)
-{
-	std::cerr << "Error: " << message << std::endl;
-}
-
-void Bot::onMessage(std::string message)
-{
-	std::cout << "Message received: " << message << std::endl;
-	socket.queueMessage("Hello! You said: " + message);
-}
-
-void Bot::onDisconnect(std::string message)
-{
-	std::cerr << "Disconnected from server: " << message << std::endl;
+	socket->setOnMessageCallback(onMessage);
+	socket->setOnDisconnectCallback(onDisconnect);
+	socket->setOnConnectCallback(onConnect);
+	socket->setOnErrorCallback(onError);
 }
