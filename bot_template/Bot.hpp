@@ -24,7 +24,7 @@ enum class EventType
 {
 	NONE,
 	ON_MESSAGE,
-	ON_DICONNECT,
+	ON_DISCONNECT,
 	ON_CONNECT,
 	ON_ERROR
 };
@@ -45,8 +45,8 @@ class Socket
 
 		int _socket_fd = -1;
 		struct sockaddr_in _socket;
+		bool running = true;
 
-		void executeEventsOfType(EventType type);
 		void setNonBlocking();
 		void executeEventsOfType(EventType type, std::string message);
 	public:

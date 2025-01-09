@@ -23,6 +23,11 @@ Bot::Bot(std::string ip, int port, std::string password, std::string nick, std::
 		_nick = nick;
 	if (!user.empty())
 		_user = user;
+
+	socket.addEventListener(EventType::ON_CONNECT, std::bind(&Bot::onConnect, this, std::placeholders::_1));
+	socket.addEventListener(EventType::ON_ERROR, std::bind(&Bot::onError, this, std::placeholders::_1));
+	socket.addEventListener(EventType::ON_MESSAGE, std::bind(&Bot::onMessage, this, std::placeholders::_1));
+	socket.addEventListener(EventType::ON_DISCONNECT, std::bind(&Bot::onDisconnect, this, std::placeholders::_1));
 }
 
 Bot::~Bot()
@@ -94,6 +99,11 @@ void Bot::onMessage(std::string message)
 {
 	std::cout << "Message received: " << message << std::endl;
 	socket.sendMessage("Hello! You said: " + message);
+}
+
+void Bot::onDisconnect(std::string message)
+{
+	std::cerr << "Disconnected from server: " << message << std::endl;
 }
 
 void Bot::Run()

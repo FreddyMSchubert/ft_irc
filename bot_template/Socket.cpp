@@ -42,32 +42,22 @@ void Socket::connectToServer(std::string ip, int port)
 			throw std::runtime_error("Invalid IP address");
 		}
 
-		int opt = 1;
-		if (setsockopt(_socket_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
-		{
-			perror("setsockopt");
-			exit(EXIT_FAILURE);
-		}
-		
-		if (bind(_socket_fd, (struct sockaddr *)&_socket, sizeof(_socket)) < 0)
-		{	
-			close(_socket_fd);
-			throw std::runtime_error("Failed to bind socket" + std::to_string(_socket_fd));
-		}
-
-		if (listen(_socket_fd, 10) == -1)
-		{
-			close(_socket_fd);
-			throw std::runtime_error("Failed to listen on socket");
-		}
-
 		setNonBlocking();
+
+		if (connect(_socket_fd, (struct sockaddr *)&_socket, sizeof(_socket)) < 0)
+		{
+			if (errno != EINPROGRESS)
+			{
+				close(_socket_fd);
+				throw std::runtime_error("Failed to connect to server");
+			}
+		}
 	}
 	catch(const std::exception &e)
 	{
 		throw std::runtime_error(e.what());
 	}
-	executeEventsOfType(EventType::ON_CONNECT);
+	executeEventsOfType(EventType::ON_CONNECT, "Connected to server");
 }
 
 void Socket::addEventListener(EventType type, EventCallback callback)
@@ -79,7 +69,15 @@ void Socket::sendMessage(std::string msg)
 {
 	if (send(_socket_fd, msg.c_str(), msg.length(), 0) == -1)
 	{
-		executeEventsOfType(EventType::ON_ERROR);
+		if (errno == EPIPE)
+		{
+			executeEventsOfType(EventType::ON_DISCONNECT, "Disconnected from server");
+			running = false;
+		}
+		else
+		{
+			executeEventsOfType(EventType::ON_ERROR, "Failed to send message");
+		}
 	}
 }
 
@@ -99,11 +97,11 @@ void Socket::Run()
 	fds[0].fd = _socket_fd;
 	fds[0].events = POLLIN;
 
-	while (true)
+	while (running)
 	{
 		int ret = poll(fds, 1, 1000);
 		if (ret == -1)
-			executeEventsOfType(EventType::ON_ERROR);
+			executeEventsOfType(EventType::ON_ERROR, "Poll error");
 		else if (ret > 0)
 		{
 			if (fds[0].revents & POLLIN)
@@ -112,7 +110,7 @@ void Socket::Run()
 				int valread = read(_socket_fd, buffer, 1024);
 				if (valread == 0)
 				{
-					executeEventsOfType(EventType::ON_DICONNECT);
+					executeEventsOfType(EventType::ON_DISCONNECT, "Disconnected from server");
 					break;
 				}
 				else
