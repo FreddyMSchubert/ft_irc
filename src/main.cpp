@@ -2,6 +2,18 @@
 #include "../inc/Server.hpp"
 
 #include <string>
+#include <csignal>
+
+bool running = true;
+
+void handle_sigint(int signal)
+{
+	if (signal == SIGINT)
+	{
+		Logger::Log(LogLevel::INFO, "SIGINT received, shutting down server...");
+		running = false;
+	}
+}
 
 int main(int argc, char **argv)
 {
@@ -10,6 +22,8 @@ int main(int argc, char **argv)
 		Logger::Log(LogLevel::ERROR, std::string("Incorrect arguments. Usage: ") + argv[0] + " <port> <password> <operator password>");
 		return -1;
 	}
+
+	std::signal(SIGINT, handle_sigint);
 
 	int port = -1;
 	std::string password = argv[2];

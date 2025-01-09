@@ -14,6 +14,8 @@
 #include <chrono>
 #include <memory>
 
+extern bool running;
+
 class Server
 {
 	private:

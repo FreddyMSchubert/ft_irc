@@ -1,2 +1,1 @@
-- sometimes when joining you dont get in (close sockets on sigint)
 - do double check

@@ -9,12 +9,15 @@ Server::Server(int port, std::string password, std::string op_password) : _port(
 
 void Server::Run()
 {
-	while (42 == 42) // to exit program, please send sigint
+	while (running) // to exit program, please send sigint
 	{
 		updatePoll();
 		acceptNewConnections();
 		handleExistingConnections();
 	}
+
+	// clean up sockets
+	_sockets.clear();
 }
 
 /* ----------------------- */
