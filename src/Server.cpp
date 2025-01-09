@@ -2,7 +2,7 @@
 #include "../inc/Socket.hpp"
 
 //Setup the listening socket and push it to the vector of sockets
-Server::Server(int port, std::string password, std::string op_password) : _port(port), _listening_socket(port), _password(password), _op_password(op_password), current_id(0)
+Server::Server(int port, std::string password, std::string op_password) : _port(port), _listening_socket(port), _password(password), _op_password(op_password), current_id(1)
 {
 	Logger::Log(LogLevel::INFO, "Server initialized on port " + std::to_string(port));
 }
@@ -99,7 +99,7 @@ void Server::handleExistingConnections()
 			else
 				Logger::Log(LogLevel::ERROR, "Error occurred on client socket: " + std::string(strerror(errno)));
 			if (_sockets[i].channel)
-				_sockets[i].channel->removeClient(_sockets[i].id, *this);
+				_sockets[i].channel->removeMember(_sockets[i].id, *this);
 			_sockets.erase(_sockets.begin() + i);
 			continue;
 		}
@@ -172,6 +172,13 @@ std::string Server::getClientNameById(unsigned int id)
 		if (client.id == id)
 			return client.getName();
 	return "unnamed user";
+}
+unsigned int Server::getClientIdByName(std::string name)
+{
+	for (auto& client : _sockets)
+		if (client.nickname == name)
+			return client.id;
+	return -1;
 }
 
 bool Server::isCorrectPassword(std::string passwordAttempt)

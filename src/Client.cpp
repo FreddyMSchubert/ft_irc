@@ -46,3 +46,10 @@ std::string Client::getName()
 		return username;
 	return std::to_string(fd);
 }
+
+bool Client::isOperatorIn(Channel * channel)
+{
+	if (!channel)
+		return isOperator;
+	return isOperator || channel->isOperator(id);
+}

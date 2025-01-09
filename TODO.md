@@ -2,3 +2,4 @@
 - stop external in/outbuffer manipulation, wrap it in readable fucntions
 - once we have unique usernames, do persistent state saving. lets enfore @ in front of usernames
 - sometimes when joining you dont get in
+- list users command

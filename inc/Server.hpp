@@ -51,4 +51,5 @@ class Server
 		std::vector<Client> &getClients();
 		Client * getClientById(unsigned int id);
 		std::string getClientNameById(unsigned int id);
+		unsigned int getClientIdByName(std::string name);
 };

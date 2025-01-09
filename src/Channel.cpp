@@ -8,61 +8,62 @@ std::string Channel::addMember(unsigned int clientId, Server &server, bool wasIn
 {
 	if (inviteOnly && !wasInvited)
 		return "This channel is invite only.";
-	if (std::find(_kicked.begin(), _kicked.end(), clientId) != _kicked.end())
+	if (_kicked[clientId])
 		return "You have been kicked from this channel.";
-	for (const auto& member : _members)
-		if (member == clientId)
-			return "You are already in this channel.";
+	if (limit > 0 && _members.size() >= (size_t)limit)
+		return std::string("This channel is full. [") + std::to_string(_members.size()) + "/" + std::to_string(limit) + " members]";
+	if (_members[clientId])
+		return "You are already in this channel.";
 
 	if (server.getClientById(clientId))
 		server.getClientById(clientId)->channel = this;
 
-	_members.emplace_back(clientId);
+	_members[clientId] = true;
 	Logger::Log(LogLevel::INFO, std::string("Added client ") + server.getClientNameById(clientId) + " to channel " + name + ".");
 	return "You have joined " + name + ".";
 }
 
 void Channel::broadcast(std::string msg, Server &server, unsigned int except_id)
 {
-	for (auto& member : _members)
+	for (const auto& member : _members)
 	{
-		if (member != except_id)
+		unsigned int clientId = member.first;
+		if (clientId != except_id)
 		{
-			Client * client = server.getClientById(member);
+			Client* client = server.getClientById(clientId);
 			if (client)
 				client->outbuffer += msg;
 		}
 	}
 }
 
-void Channel::removeClient(unsigned int clientId, Server &server)
+void Channel::removeMember(unsigned int clientId, Server &server)
 {
-	for (size_t i = 0; i < _members.size(); i++)
-	{
-		if (_members[i] == clientId)
-		{
-			Client * client = server.getClientById(clientId);
-			_members.erase(_members.begin() + i);
-			if (client)
-				client->channel = nullptr;
-			return;
-		}
-	}
+	_members[clientId] = false;
+	Client * client = server.getClientById(clientId); 
+	if (client)
+		client->channel = nullptr;
 }
 
 void Channel::kick(unsigned int clientId, Server &server)
 {
-	removeClient(clientId, server);
-	_kicked.emplace_back(clientId);
+	removeMember(clientId, server);
+	_kicked[clientId] = true;
 }
 void Channel::unkick(unsigned int clientId)
 {
-	for (size_t i = 0; i < _kicked.size(); i++)
-	{
-		if (_kicked[i] == clientId)
-		{
-			_kicked.erase(_kicked.begin() + i);
-			return;
-		}
-	}
+	_kicked[clientId] = false;
+}
+
+void Channel::addOperator(unsigned int clientId)
+{
+	_operators[clientId] = true;
+}
+void Channel::removeOperator(unsigned int clientId)
+{
+	_operators[clientId] = false;
+}
+bool Channel::isOperator(unsigned int clientId)
+{
+	return _operators[clientId];
 }

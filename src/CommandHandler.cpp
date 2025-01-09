@@ -100,6 +100,10 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 			server.createChannel(channelName);
 			channel = server.getChannel(channelName);
 		}
+
+		if (channel->password != "" && (partsSize < 3 || parts[2] != channel->password))
+			return "Incorrect or missing password for channel " + channel->name + ".";
+
 		std::string channelJoinReturn = channel->addMember(clientId, server);
 		client.channel = channel;
 
@@ -148,7 +152,7 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 		Channel *channel = server.getChannel(parts[1]);
 		if (!channel)
 			return "Channel not found";
-		if (!client.isOperator)
+		if (!client.isOperatorIn(channel))
 			return "You must be an operator to kick someone.";
 
 		std::string userToKick = parts[2];
@@ -170,7 +174,7 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 		Channel *channel = server.getChannel(parts[1]);
 		if (!channel)
 			return "Channel not found";
-		if (!client.isOperator)
+		if (!client.isOperatorIn(channel))
 			return "You must be an operator to invite someone.";
 
 		std::string userToInvite = parts[2];
@@ -202,7 +206,7 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 		Channel *channel = server.getChannel(parts[1]);
 		if (!channel)
 			return "Channel not found";
-		if (!client.isOperator)
+		if (!client.isOperatorIn(channel) && !channel->anyoneCanChangeTopic)
 			return "You must be an operator to change the topic.";
 		
 		channel->topic = parts[2];
@@ -210,5 +214,73 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 		return (client.channel && client.channel == channel) ? "" : "Topic changed to: " + parts[2] + " in " + channel->name;
 	}
 
-	return "Unrecognized command. Available commands: PASS, OPER, NICK, USER, JOIN, PRIVMSG / MSG, KICK, INVITE";
+	/*
+		i - Invite
+		t - Topic
+		k - password
+		o - operator
+		l - limit
+	*/
+	else if (parts[0] == "MODE")
+	{
+		if (parts.size() < 3 || parts.size() > 4)
+			return "Format: \"MODE <channel name> <mode> <optional argument>\"";
+		Channel *channel = server.getChannel(parts[1]);
+		if (!client.isOperatorIn(channel))
+			return "You must be an operator to change the mode.";
+		if (!channel)
+			return "Channel not found";
+		
+		std::string mode = parts[2];
+		if (mode == "+i")
+			channel->inviteOnly = true;
+		else if (mode == "-i")
+			channel->inviteOnly = false;
+		else if (mode == "+t")
+			channel->anyoneCanChangeTopic = true;
+		else if (mode == "-t")
+			channel->anyoneCanChangeTopic = false;
+		else if (mode == "+k")
+		{
+			if (parts.size() != 4)
+				return "Format: \"MODE <channel name> +k <password>\"";
+			channel->password = parts[3];
+		}
+		else if (mode == "-k")
+			channel->password = "";
+		else if (mode == "+l")
+		{
+			if (parts.size() != 4)
+				return "Format: \"MODE <channel name> +l <limit>\"";
+			channel->limit = std::stoi(parts[3]);
+		}
+		else if (mode == "-l")
+			channel->limit = 0;
+		else if (mode == "+o")
+		{
+			if (parts.size() != 4)
+				return "Format: \"MODE <channel name> +o <client nickname>\"";
+			unsigned int clientIdToOp = server.getClientIdByName(parts[3]);
+			if (clientIdToOp > 0)
+				channel->addOperator(clientIdToOp);
+			else
+				return "Client not found.";
+		}
+		else if (mode == "-o")
+		{
+			if (parts.size() != 4)
+				return "Format: \"MODE <channel name> -o <client nickname>\"";
+			unsigned int clientIdToDeop = server.getClientIdByName(parts[3]);
+			if (clientIdToDeop > 0)
+				channel->removeOperator(clientIdToDeop);
+			else
+				return "Client not found.";
+		}
+		else
+			return "Unrecognized mode. Available modes: +i, -i, +t, -t, +k, -k, +l, -l, +o, -o";
+		
+		return "Mode set.";
+	}
+
+	return "Unrecognized command. Available commands: PASS, OPER, NICK, USER, JOIN, PRIVMSG / MSG, KICK, INVITE, TOPIC, MODE";
 }

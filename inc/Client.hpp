@@ -36,4 +36,5 @@ class Client
 		std::string username = "";
 
 		std::string getName();
+		bool isOperatorIn(Channel *channel);
 };

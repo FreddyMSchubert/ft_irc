@@ -26,9 +26,9 @@ fclean: clean
 	rm -f $(NAME)
 
 run: all
-	./$(NAME) 8080 password password
+	./$(NAME) 6667 password password
 
 re: fclean all
 
 ren: re
-	./$(NAME) 8080 password password
+	./$(NAME) 6667 password password
