@@ -99,7 +99,7 @@ void Server::handleExistingConnections()
 			else
 				Logger::Log(LogLevel::ERROR, "Error occurred on client socket: " + std::string(strerror(errno)));
 			if (_sockets[i].channel)
-				_sockets[i].channel->removeClient(_sockets[i].id);
+				_sockets[i].channel->removeClient(_sockets[i].id, *this);
 			_sockets.erase(_sockets.begin() + i);
 			continue;
 		}
@@ -157,11 +157,6 @@ void Server::HandleClientData(unsigned int clientId)
 
 Client * Server::getClientById(unsigned int id)
 {
-	std::cout << "the following clients are connected: " << std::endl;
-	for (auto& client : _sockets)
-		std::cout << client.id << ", " << client.getName() << std::endl;
-	std::cout << "the id we are looking for is: " << id << std::endl;
-	std::cout << "the size of the vector is: " << _sockets.size() << std::endl;
 	for (auto& client_ptr : _sockets)
 		if (client_ptr.id == id)
 			return &client_ptr;

@@ -48,6 +48,7 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 		if (server.isCorrectOperatorPassword(parts[1]))
 		{
 			client.isOperator = true;
+			client.isAuthenticated = true;
 			return "Operator Authentication successful.";
 		}
 		return "Operator Authentication failed.";
@@ -76,12 +77,12 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 			return "Please authenticate using PASS before joining a channel.";
 		if (partsSize < 2 || partsSize > 3)
 		{
-			std::string response = "Format: \"JOIN <channel name> <channel password if necessary>\"";
+			std::string response = "Format: \"JOIN <channel name> <channel password if necessary>\".\n";
 			if (client.channel)
 				response += "You are currently in channel " + client.channel->name + ".\n";
 			if (server.getChannels().size() > 0)
 			{
-				response += "Joinable channels: \n";
+				response += "Joinable channels:   ";
 				for (auto &channel : server.getChannels())
 					response += channel.name + ", ";
 				response.pop_back();
@@ -138,6 +139,28 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 		}
 
 		return std::string();
+	}
+
+	else if (parts[0] == "KICK")
+	{
+		if (parts.size() != 3)
+			return "Format: \"KICK <channel name> <client nickname>\"";
+		Channel *channel = server.getChannel(parts[1]);
+		if (!channel)
+			return "Channel not found";
+		if (!client.isOperator)
+			return "You must be an operator to kick someone.";
+
+		std::string userToKick = parts[2];
+		unsigned int clientIdToKick = 0;
+		for (auto &c : server.getClients())
+			if (c.nickname == userToKick)
+				clientIdToKick = c.id;
+		channel->kick(clientIdToKick, server);
+
+		if (server.getClientById(clientIdToKick))
+			server.getClientById(clientIdToKick)->outbuffer += "You have been kicked from " + channel->name + ".\n";
+		return "Kicked " + userToKick + " from " + channel->name + ".";
 	}
 
 	return "Unrecognized command. Available commands: PASS, OPER, NICK, USER, JOIN, MSG, ";
