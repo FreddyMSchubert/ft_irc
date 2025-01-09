@@ -190,5 +190,25 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 		return "Invited " + userToInvite + " to " + channel->name + ".";
 	}
 
+	else if (parts[0] == "TOPIC")
+	{
+		if (parts.size() != 3)
+		{
+			if (client.channel && client.channel->topic != "")
+				return std::string("Format: \"TOPIC <channel name> <new topic>\" - Current topic: ") + client.channel->topic;
+			return "Format: \"TOPIC <channel name> <new topic>\"";
+		}
+
+		Channel *channel = server.getChannel(parts[1]);
+		if (!channel)
+			return "Channel not found";
+		if (!client.isOperator)
+			return "You must be an operator to change the topic.";
+		
+		channel->topic = parts[2];
+		channel->broadcast("Topic changed to: " + parts[2] + "\n", server);
+		return (client.channel && client.channel == channel) ? "" : "Topic changed to: " + parts[2] + " in " + channel->name;
+	}
+
 	return "Unrecognized command. Available commands: PASS, OPER, NICK, USER, JOIN, PRIVMSG / MSG, KICK, INVITE";
 }

@@ -18,6 +18,7 @@ class Channel
 
 		std::string name = "";
 		bool inviteOnly = false;
+		std::string topic = "";
 
 		std::string addMember(unsigned int client, Server &server, bool wasInvited = false);
 		void broadcast(std::string msg, Server &server, unsigned int except_id = -1);
