@@ -1,6 +1,7 @@
 #include "Bot.hpp"
 #include <exception>
 #include <stdexcept>
+#include <unistd.h>
 
 Bot::Bot(std::string ip, int port, std::string password, std::string nick, std::string user)
 {
@@ -32,7 +33,7 @@ Bot::Bot(std::string ip, int port, std::string password, std::string nick, std::
 
 Bot::~Bot()
 {
-	socket.sendMessage("QUIT");
+	socket.queueMessage("QUIT");
 }
 
 void Bot::connectToServer()
@@ -47,47 +48,60 @@ void Bot::connectToServer()
 
 void Bot::authenticate()
 {
-	socket.sendMessage("PASS " + _password);
-	socket.sendMessage("NICK " + _nick);
-	socket.sendMessage("USER bot" + _user);
+	std::cout << "Authenticating with:" << std::endl;
+	std::cout << "\tPASS: " << _password << std::endl;
+	std::cout << "\tNICK: " << _nick << std::endl;
+	std::cout << "\tUSER: " << _user << std::endl;
+	sendRawMessage("PASS " + _password);
+	sleep(1);
+	sendRawMessage("NICK " + _nick);
+	sleep(1);
+	sendRawMessage("USER bot" + _user);
+	sleep(1);
 }
 
 void Bot::directMessage(std::string user, std::string msg)
 {
-	socket.sendMessage("PRIVMSG " + user + " :" + msg);
+	socket.queueMessage("PRIVMSG " + user + " :" + msg);
+}
+
+void Bot::sendRawMessage(std::string msg)
+{
+	socket.queueMessage(msg);
 }
 
 void Bot::sendMessage(std::string msg)
 {
-	socket.sendMessage("PRIVMSG " + _current_channel + " :" + msg);
+	socket.queueMessage("PRIVMSG " + _current_channel + " :" + msg);
 }
 
 void Bot::sendMessage(std::string channelname, std::string msg)
 {
-	socket.sendMessage("PRIVMSG " + channelname + " :" + msg);
+	socket.queueMessage("PRIVMSG " + channelname + " :" + msg);
 }
 
 void Bot::changeChannel(std::string channel)
 {
 	_current_channel = channel;
-	socket.sendMessage("JOIN " + channel);
+	socket.queueMessage("JOIN " + channel);
 }
 
 void Bot::changeChannel(std::string channel, std::string password)
 {
 	_current_channel = channel;
-	socket.sendMessage("JOIN " + channel + " " + password);
+	socket.queueMessage("JOIN " + channel + " " + password);
 }
 
 void Bot::onConnect(std::string message)
 {
 	(void)message;
-	std::cout << "Connected to IRC Server\nAuthenticating..." << std::endl;
+	std::cout << "Connected to IRC Server\n" << std::endl;
 	try {
 		this->authenticate();
 	} catch (std::exception& e) {
 		std::cerr << "Failed to authenticate: " << e.what() << std::endl;
 	}
+	socket.Run();
 }
 
 void Bot::onError(std::string message)
@@ -98,15 +112,10 @@ void Bot::onError(std::string message)
 void Bot::onMessage(std::string message)
 {
 	std::cout << "Message received: " << message << std::endl;
-	socket.sendMessage("Hello! You said: " + message);
+	socket.queueMessage("Hello! You said: " + message);
 }
 
 void Bot::onDisconnect(std::string message)
 {
 	std::cerr << "Disconnected from server: " << message << std::endl;
-}
-
-void Bot::Run()
-{
-	socket.Run();
 }

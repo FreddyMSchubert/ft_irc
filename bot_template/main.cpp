@@ -8,7 +8,7 @@
 
 int main(int argc, char *argv[])
 {
-    Bot bot("127.0.0.1", 8080, "password", "nick", "user");
+    Bot bot("127.0.0.1", 6667, "password", "bot", "template_bot");
 
     try {
         bot.connectToServer();
@@ -16,8 +16,6 @@ int main(int argc, char *argv[])
         std::cerr << "Failed to connect to IRC Server: " << e.what() << std::endl;
         return 1;
     }
-
-    bot.Run();
 
     return 0;
 }

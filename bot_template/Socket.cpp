@@ -42,15 +42,18 @@ void Socket::connectToServer(std::string ip, int port)
 			throw std::runtime_error("Invalid IP address");
 		}
 
-		setNonBlocking();
-
 		if (connect(_socket_fd, (struct sockaddr *)&_socket, sizeof(_socket)) < 0)
 		{
 			if (errno != EINPROGRESS)
 			{
 				close(_socket_fd);
-				throw std::runtime_error("Failed to connect to server");
+				executeEventsOfType(EventType::ON_ERROR, std::string(strerror(errno)));
+				throw std::runtime_error("Failed to connect to server: " + std::string(strerror(errno)));
 			}
+		}
+		else
+		{
+			std::cout << "Connected to server: " << ip << ":" << port << std::endl;
 		}
 	}
 	catch(const std::exception &e)
@@ -65,19 +68,35 @@ void Socket::addEventListener(EventType type, EventCallback callback)
 	_events.push_back({type, callback});
 }
 
+void Socket::queueMessage(std::string msg)
+{
+	_messages.emplace_back(msg);
+}
+
 void Socket::sendMessage(std::string msg)
 {
-	if (send(_socket_fd, msg.c_str(), msg.length(), 0) == -1)
+	ssize_t sent = send(_socket_fd, msg.c_str(), msg.length(), 0);
+	if (sent == -1)
 	{
 		if (errno == EPIPE)
 		{
+			std::cerr << "Error: Broken pipe (EPIPE) - Disconnected from server" << std::endl;
 			executeEventsOfType(EventType::ON_DISCONNECT, "Disconnected from server");
 			running = false;
 		}
 		else
 		{
+			std::cerr << "Error: Failed to send message: " << strerror(errno) << std::endl;
 			executeEventsOfType(EventType::ON_ERROR, "Failed to send message");
 		}
+	}
+	else if (sent < msg.length())
+	{
+		std::cerr << "Warning: Partial message sent: " << sent << " of " << msg.length() << " bytes" << std::endl;
+	}
+	else
+	{
+		std::cout << "Message sent successfully: " << msg << std::endl;
 	}
 }
 
@@ -95,28 +114,60 @@ void Socket::Run()
 	// Poll for events
 	struct pollfd fds[1];
 	fds[0].fd = _socket_fd;
-	fds[0].events = POLLIN;
+	fds[0].events = POLLIN | POLLOUT;
+
+	setNonBlocking();
 
 	while (running)
 	{
 		int ret = poll(fds, 1, 1000);
 		if (ret == -1)
-			executeEventsOfType(EventType::ON_ERROR, "Poll error");
+		{
+			executeEventsOfType(EventType::ON_ERROR, "Poll error: " + std::string(strerror(errno)));
+		}
+		else if (ret == 0)
+		{
+			std::cout << "Poll timeout, no events" << std::endl;
+		}
 		else if (ret > 0)
 		{
 			if (fds[0].revents & POLLIN)
 			{
+				std::cout << "POLLIN event detected" << std::endl;
 				char buffer[1024] = {0};
-				int valread = read(_socket_fd, buffer, 1024);
+				std::memset(buffer, 0, sizeof(buffer));
+				int valread = read(_socket_fd, buffer, sizeof(buffer) - 1);
 				if (valread == 0)
 				{
+					std::cerr << "Server closed the connection" << std::endl;
 					executeEventsOfType(EventType::ON_DISCONNECT, "Disconnected from server");
 					break;
 				}
+				else if (valread < 0)
+				{
+					std::cerr << "Read error: " << strerror(errno) << std::endl;
+					executeEventsOfType(EventType::ON_ERROR, "Read error: " + std::string(strerror(errno)));
+				}
 				else
 				{
+					std::cout << "Data read from server: " << buffer << std::endl;
 					executeEventsOfType(EventType::ON_MESSAGE, std::string(buffer));
 				}
+			}
+			if (fds[0].revents & POLLOUT)
+			{
+				std::cout << "POLLOUT event detected" << std::endl;
+				if (!_messages.empty())
+				{
+					sendMessage(_messages.front());
+					_messages.erase(_messages.begin());
+				}
+			}
+			if (fds[0].revents & (POLLERR | POLLHUP | POLLNVAL))
+			{
+				std::cerr << "Poll error event detected: " << fds[0].revents << std::endl;
+				executeEventsOfType(EventType::ON_ERROR, "Poll error event detected");
+				break;
 			}
 		}
 	}

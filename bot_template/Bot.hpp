@@ -42,6 +42,7 @@ class Socket
 		std::string				_socket_ip;
 		int						_socket_port;
 		std::vector<Event>		_events;
+		std::vector<std::string> _messages;
 
 		int _socket_fd = -1;
 		struct sockaddr_in _socket;
@@ -49,6 +50,7 @@ class Socket
 
 		void setNonBlocking();
 		void executeEventsOfType(EventType type, std::string message);
+		void sendMessage(std::string msg);
 	public:
 		Socket();
 		~Socket();
@@ -56,7 +58,7 @@ class Socket
 		void connectToServer(std::string ip, int port);
 
 		void addEventListener(EventType type, EventCallback callback);
-		void sendMessage(std::string msg);
+		void queueMessage(std::string msg);
 
 		void Run();
 
@@ -83,6 +85,7 @@ class Bot
 
 		void connectToServer();
 		void authenticate();
+		void sendRawMessage(std::string msg);
 		void directMessage(std::string user, std::string msg);
 		void sendMessage(std::string msg);
 		void sendMessage(std::string channelname, std::string msg);
@@ -93,6 +96,4 @@ class Bot
 		void onDisconnect(std::string message);
 		void onConnect(std::string message);
 		void onError(std::string message);
-
-		void Run();
 };
