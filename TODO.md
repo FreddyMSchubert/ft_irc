@@ -1,0 +1,4 @@
+- should we make it impossible to have the same username as another person? otherwise you might message two people.
+- stop external in/outbuffer manipulation, wrap it in readable fucntions
+- once we have unique usernames, do persistent state saving. lets enfore @ in front of usernames
+- sometimes when joining you dont get in

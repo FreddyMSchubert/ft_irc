@@ -61,10 +61,18 @@ std::string CommandHandler::HandleCommand(std::string inCommand, std::shared_ptr
 	}
 	else if (parts[0] == "JOIN") // JOIN OR CREATE A CHANNEL
 	{
-		if (partsSize < 2 || partsSize > 3)
-			return "Format: \"JOIN <channel name> <channel password if necessary>\"";
 		if (!client->isAuthenticated)
 			return "Please authenticate using PASS before joining a channel.";
+		if (partsSize < 2 || partsSize > 3)
+		{
+			std::string response;
+			if (!client->channel)
+				response += "You are currently in channel " + client->channel->name + ".\n";
+			response += "Joinable channels: \n";
+			for (auto &channel : server.getChannels())
+				response += channel.name + ", ";
+			return "Format: \"JOIN <channel name> <channel password if necessary>\"";
+		}
 		
 		std::string channelName = parts[1];
 		Channel *channel = server.getChannel(channelName);
@@ -73,15 +81,18 @@ std::string CommandHandler::HandleCommand(std::string inCommand, std::shared_ptr
 			if (channelName[0] != '#')
 				return "Channel names must start with \"#\"";
 			server.createChannel(channelName);
+			channel = server.getChannel(channelName);
 		}
-		else
-			channel->addMember(client);
+		channel->addMember(client);
+		client->channel = channel;
 
 		return "You have joined " + channelName + ".";
 	}
 
 	else if (parts[0] == "PRIVMSG") // MESSAGE PEOPLE
 	{
+		if (!client->isAuthenticated)
+			return "Please authenticate using PASS before messaging people.";
 		if (partsSize < 3)
 			return "Format: \"PRIVMSG <channel name or person nickname> <message>";
 
@@ -100,14 +111,17 @@ std::string CommandHandler::HandleCommand(std::string inCommand, std::shared_ptr
 			Channel *channel = server.getChannel(target);
 			if (!channel)
 				return ("Channel not found");
-			channel->broadcast(msg);
+			channel->broadcast(msg, client->fd);
 		}
-		else
+		else if (target != client->nickname)
 		{
-			client->outbuffer += msg;
+			std::vector<std::shared_ptr<Client>> &clients = server.getClients();
+			for (auto &c : clients)
+				if (c->nickname == target)
+					c->outbuffer += msg;
 		}
 
-		return "You have successfully messaged " + target + ".";
+		return std::string();
 	}
 
 	return "Unrecognized command. Available commands: PASS, OPER, NICK, USER, JOIN, MSG, ";

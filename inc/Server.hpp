@@ -44,5 +44,8 @@ class Server
 		bool isCorrectOperatorPassword(std::string passwordAttempt);
 
 		Channel *getChannel(std::string channelName);
+		std::vector<Channel> &getChannels();
 		void createChannel(std::string channelName);
+
+		std::vector<std::shared_ptr<Client>> &getClients();
 };

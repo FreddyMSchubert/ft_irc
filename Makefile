@@ -1,7 +1,7 @@
 NAME = ircserv
 
 CXX = c++
-CXXFLAGS = -g -std=c++17
+CXXFLAGS = -g -std=c++17 -Wall -Wextra -Werror -fsanitize=address
 
 # TODO: Add all source files
 SRCS = $(shell find ./src -name "*.cpp")

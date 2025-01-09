@@ -17,9 +17,10 @@ void Channel::addMember(std::shared_ptr<Client> client)
 	Logger::Log(LogLevel::INFO, std::string("Added client ") + client->getName() + " to channel " + name + ".");
 }
 
-void Channel::broadcast(std::string msg)
+void Channel::broadcast(std::string msg, int except_fd)
 {
 	for (const auto& member_wp : _members)
 		if (auto member_sp = member_wp.lock())
-			member_sp->outbuffer += msg;
+			if (member_sp->fd != except_fd)
+				member_sp->outbuffer += msg;
 }

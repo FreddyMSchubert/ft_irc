@@ -2,6 +2,8 @@
 
 #include "Socket.hpp"
 
+class Channel; // avoid circ depend
+
 typedef struct s_socket_state
 {
 	bool read;			// POLLIN
@@ -18,6 +20,7 @@ class Client
 		t_socket_state	states;
 		std::string		inbuffer;
 		std::string		outbuffer;
+		Channel *		channel = nullptr;
 
 		Client(int fd, Socket socket);	// Client socket constructor
 		Client(int port);				// Listening socket constructor

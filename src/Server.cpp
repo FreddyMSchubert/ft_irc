@@ -147,7 +147,8 @@ void Server::HandleClientData(std::shared_ptr<Client> & client)
 	std::string line = client->inbuffer.substr(0, newLinePos);
 	client->inbuffer.erase(0, newLinePos + 1);
 	std::string response = CommandHandler::HandleCommand(line, client, *this);
-	client->outbuffer += response + "\n";
+	if (!response.empty())
+		client->outbuffer += response + "\n";
 }
 
 bool Server::isCorrectPassword(std::string passwordAttempt)
@@ -170,4 +171,13 @@ void Server::createChannel(std::string channelName)
 {
 	_channels.emplace_back(channelName);
 	Logger::Log(LogLevel::INFO, "Created new channel: " + channelName);
+}
+std::vector<Channel> &Server::getChannels()
+{
+	return _channels;
+}
+
+std::vector<std::shared_ptr<Client>> &Server::getClients()
+{
+	return _sockets;
 }

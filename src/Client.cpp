@@ -1,5 +1,7 @@
 #include "../inc/Client.hpp"
 
+#include "../inc/Channel.hpp" // avoid circ depend
+
 Client::Client(int fd, Socket socket) // Client socket constructor
 	: socket(std::move(socket)), fd(fd) {}
 Client::Client(int port) // Listening socket constructor
