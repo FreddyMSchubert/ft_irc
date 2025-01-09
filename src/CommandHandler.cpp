@@ -214,13 +214,6 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 		return (client.channel && client.channel == channel) ? "" : "Topic changed to: " + parts[2] + " in " + channel->name;
 	}
 
-	/*
-		i - Invite
-		t - Topic
-		k - password
-		o - operator
-		l - limit
-	*/
 	else if (parts[0] == "MODE")
 	{
 		if (parts.size() < 3 || parts.size() > 4)
