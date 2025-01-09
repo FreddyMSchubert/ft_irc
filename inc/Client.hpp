@@ -15,6 +15,7 @@ typedef struct s_socket_state
 class Client
 {
 	public:
+		unsigned int	id;
 		Socket			socket;
 		int				fd;
 		t_socket_state	states;
@@ -22,8 +23,8 @@ class Client
 		std::string		outbuffer;
 		Channel *		channel = nullptr;
 
-		Client(int fd, Socket socket);	// Client socket constructor
-		Client(int port);				// Listening socket constructor
+		Client(int fd, Socket socket, int id);	// Client socket constructor
+		Client(int port);						// Listening socket constructor
 		Client(const Client&) = delete;
 		Client& operator=(const Client&) = delete;
 		Client(Client&& other) noexcept;

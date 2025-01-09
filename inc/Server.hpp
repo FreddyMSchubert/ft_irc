@@ -17,19 +17,20 @@
 class Server
 {
 	private:
-		int										_port;
-		Client									_listening_socket;
-		std::vector<std::shared_ptr<Client>>	_sockets;
+		int					_port;
+		Client				_listening_socket;
+		std::vector<Client>	_sockets;
 
 		std::string					_password;
 		std::string					_op_password;
 		std::vector<Channel>		_channels;
+		unsigned int				current_id;
 
 		void updatePoll();
 		void acceptNewConnections();
 		void handleExistingConnections();
 
-		void HandleClientData(std::shared_ptr<Client> & client);
+		void HandleClientData(unsigned int clientId);
 
 	public:
 		Server(int port, std::string _password, std::string op_password);
@@ -47,5 +48,7 @@ class Server
 		std::vector<Channel> &getChannels();
 		void createChannel(std::string channelName);
 
-		std::vector<std::shared_ptr<Client>> &getClients();
+		std::vector<Client> &getClients();
+		Client * getClientById(unsigned int id);
+		std::string getClientNameById(unsigned int id);
 };

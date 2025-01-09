@@ -5,16 +5,19 @@
 
 #include "Client.hpp"
 
+class Server;
+
 class Channel
 {
 	private:
-		std::vector<std::weak_ptr<Client>> _members;
+		std::vector<unsigned int> _members;
 
 	public:
 		Channel(std::string name);
 
 		std::string name = "";
 
-		void addMember(std::shared_ptr<Client> client);
-		void broadcast(std::string msg, int except_fd = -1);
+		void addMember(unsigned int client, Server &server);
+		void broadcast(std::string msg, Server &server, unsigned int except_id = -1);
+		void removeClient(unsigned int clientId);
 };
