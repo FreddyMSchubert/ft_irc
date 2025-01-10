@@ -43,7 +43,7 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 	std::vector<std::string> parts = split(inCommand, ' ');
 	int partsSize = parts.size();
 	if (parts.empty())
-		return ":irctic.com 421 " + parts[0] + " :Unknown command"; // ERR_UNKNOWNCOMMAND
+		return ":irctic.com 421 :Unknown command"; // ERR_UNKNOWNCOMMAND
 
 
 
@@ -93,18 +93,18 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 
 	else if (parts[0] == "OPER") // AUTHENTICATE AS OPERATOR
 	{
-		if (partsSize != 2)
+		if (partsSize != 3)
 			return ":irctic.com 461 OPER :Not enough parameters"; // ERR_NEEDMOREPARAMS
-		if (client.isOperator)
-			return ":irctic.com 462 * :You are already an IRC operator"; // ERR_ALREADYREGISTRED
 		if (!client.isAuthenticated)
 			return ":irctic.com 451 * :You have not registered"; // ERR_NOTREGISTERED
 
-		if (server.isCorrectOperatorPassword(parts[1]))
+		Client *clientPtr = server.getClientByName(parts[1]);
+		if (server.isCorrectOperatorPassword(parts[2]))
 		{
-			client.isOperator = true;
+			clientPtr->isOperator = true;
 			return ":irctic.com 381 * :You are now an IRC operator"; // RPL_YOUREOPER
 		}
+		std::cout << "Typed operator password: \"" << parts[2] << "\"" << std::endl;
 		return ":irctic.com 464 * :Operator password incorrect"; // ERR_PASSWDMISMATCH
 	}
 
@@ -128,7 +128,7 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 
 
 
-	else if (parts[0] == "USER") // SET USERNAME
+	else if (parts[0] == "USER" || parts[0] == "userhost") // SET USERNAME
 	{
 		if (partsSize < 2)
 			return ":irctic.com 461 USER :Not enough parameters"; // ERR_NEEDMOREPARAMS
@@ -142,6 +142,51 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 		if (client.updateAuthStatus())
 				CompleteHandshake(clientId, server);
 		return "Your username is now \"" + parts[1] + "\".";
+	}
+
+
+
+	else if (parts[0] == "NAMES") // LIST ALL PEOPLE / PEOPLE IN A CHANNEL
+	{
+		if (partsSize == 1)
+		{
+			std::string response = ":irctic.com 353 " + client.nickname + " = :"; // RPL_NAMREPLY
+			for (auto &channel : server.getChannels())
+			{
+				response += channel.name + " :";
+				for (auto &member : channel.getMembers())
+				{
+					if (member.second)
+					{
+						Client *cl = server.getClientById(member.first);
+						if (cl)
+							response += cl->nickname + " ";
+					}
+				}
+				response += "\r\n";
+			}
+			response += ":irctic.com 366 " + client.nickname + " :End of NAMES list"; // RPL_ENDOFNAMES
+			return response;
+		}
+		else if (partsSize >= 2)
+		{
+			Channel *channel = server.getChannel(parts[1]);
+			if (!channel)
+				return ":irctic.com 403 " + parts[1] + " :No such channel"; // ERR_NOSUCHCHANNEL
+			std::string response = ":irctic.com 353 " + client.nickname + " = " + channel->name + " :";
+			for (auto &member : channel->getMembers())
+			{
+				if (member.second)
+				{
+					Client *cl = server.getClientById(member.first);
+					if (cl)
+						response += cl->nickname + " ";
+				}
+			}
+			response += "\r\n";
+			response += ":irctic.com 366 " + client.nickname + " :End of NAMES list"; // RPL_ENDOFNAMES
+			return response;
+		}
 	}
 
 
@@ -187,6 +232,26 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 
 
 
+	else if (parts[0] == "PART") // LEAVE A CHANNEL
+	{
+		if (!client.isAuthenticated)
+			return ":irctic.com 451 PART :You have not registered"; // ERR_NOTREGISTERED
+		if (!client.channel)
+			return ":irctic.com 442 * :You're not on any channel"; // ERR_NOTONCHANNEL
+
+		std::string partMessage = "PART " + client.channel->name;
+		if (partsSize > 1)
+			partMessage += " :" + parts[1];
+		partMessage += "\r\n";
+
+		client.channel->removeMember(clientId, server);
+		client.channel = nullptr;
+
+		return partMessage;
+	}
+
+
+
 	else if (parts[0] == "PRIVMSG" || parts[0] == "MSG") // MESSAGE PEOPLE
 	{
 		if (!client.isAuthenticated)
@@ -202,7 +267,7 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 			if (i < parts.size() - 1)
 				msg += " ";
 		}
-		msg += "\r\n";
+		msg += "\r\n"; 
 
 		if (target[0] == '#')
 		{
@@ -234,7 +299,7 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 
 	else if (parts[0] == "KICK")
 	{
-		if (parts.size() != 3)
+		if (parts.size() < 3)
 			return ":irctic.com 461 KICK :Not enough parameters"; // ERR_NEEDMOREPARAMS
 		Channel *channel = server.getChannel(parts[1]);
 		if (!channel)
@@ -247,7 +312,10 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 			return ":irctic.com 401 " + parts[2] + " :No such nick/channel"; // ERR_NOSUCHNICK
 		channel->kick(clientToKick->id, server);
 
-		clientToKick->sendMessage("You have been kicked from " + channel->name + ".");
+		if (parts.size() < 4)
+			clientToKick->sendMessage("You have been kicked from " + channel->name + ".");
+		else
+			clientToKick->sendMessage("You have been kicked from " + channel->name + " (" + parts[3] + ").");
 		return ":irctic.com 200 KICK " + channel->name + " " + parts[2] + " :Kicked"; // Custom success reply
 	}
 
@@ -387,5 +455,5 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 
 
 
-	return "Unrecognized command. Available commands: PASS, OPER, NICK, USER, JOIN, PRIVMSG / MSG, KICK, INVITE, TOPIC, MODE, USERS";
+	return ":irctic.com 421 " + parts[0] + " :Unknown command"; // ERR_UNKNOWNCOMMAND
 }

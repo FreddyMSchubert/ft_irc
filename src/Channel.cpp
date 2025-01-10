@@ -67,3 +67,8 @@ bool Channel::isOperator(unsigned int clientId)
 {
 	return _operators[clientId];
 }
+
+std::map<unsigned int, bool> & Channel::getMembers()
+{
+	return _members;
+}

@@ -56,6 +56,10 @@ bool Client::isOperatorIn(Channel * channel)
 
 void Client::sendMessage(std::string msg)
 {
+	if (msg.empty())
+		return;
+	if (msg[msg.size() - 1] != '\n')
+		msg += "\r\n";
 	outbuffer += msg;
 }
 
