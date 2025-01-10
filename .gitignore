@@ -1,6 +1,5 @@
-*.o
+**/*.o
 .vscode
 ircserv
 obj/
-bot_template/bot/
-bot_template
+bot_template/bot_template
