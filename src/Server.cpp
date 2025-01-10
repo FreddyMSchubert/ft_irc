@@ -128,6 +128,8 @@ void Server::handleExistingConnections()
 			{
 				_sockets[i].socket.sendData(_sockets[i].outbuffer);
 				std::cout << "Sent: \"" << _sockets[i].outbuffer << "\"" << std::endl; // temporary, for irssi debugging
+				for (int c : _sockets[i].outbuffer)
+					std::cout << c << " ";
 				_sockets[i].outbuffer.clear();
 			}
 			catch (const std::exception &e)
