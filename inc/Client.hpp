@@ -32,10 +32,13 @@ class Client
 
 		bool isAuthenticated = false;
 		bool isOperator = false;
+		bool knewPassword = false;
+		bool hasReceivedWelcome = false;
 		std::string nickname = "";
 		std::string username = "";
 
 		std::string getName();
 		bool isOperatorIn(Channel *channel);
 		void sendMessage(std::string msg);
+		bool updateAuthStatus();
 };

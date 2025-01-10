@@ -12,6 +12,25 @@ static std::vector<std::string> split(const std::string &str, char delim)
 	return tokens;
 }
 
+std::string CommandHandler::CompleteHandshake(unsigned int clientId, Server & server)
+{
+	Client *clientPtr = server.getClientById(clientId);
+	if (!clientPtr)
+		return "Client not found\r\n";
+	Client &client = *clientPtr;
+
+	if (client.isAuthenticated && !client.hasReceivedWelcome)
+	{
+		std::string welcomeMsg = ":irctic.com 001 " + client.nickname + " :Welcome to the IRCtic, " + client.nickname + "!\r\n";
+		client.sendMessage(welcomeMsg);
+		client.hasReceivedWelcome = true;
+		Logger::Log(LogLevel::INFO, "Sent RPL_WELCOME to " + client.nickname);
+		return welcomeMsg;
+	}
+
+	return "";
+}
+
 std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int clientId, Server & server)
 {
 	Client *clientPtr = server.getClientById(clientId);
@@ -28,31 +47,31 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 	{
 		if (partsSize != 2)
 			return std::string("Format: \"PASS <password>\".") + (client.isAuthenticated ? " You are authenticated. " : " You are not authenticated.");
-		if (client.isAuthenticated)
-			return "You are already authenticated.";
-		if (client.username.empty())
-			return "Please set a username using USER before authenticating.";
-		if (client.nickname.empty())
-			return "Please set a nickname using NICK before authenticating.";
+		if (client.knewPassword)
+			return "You already knew the password.";
 
 		if (server.isCorrectPassword(parts[1]))
 		{
-			client.isAuthenticated = true;
-			return ":irctic.com 001 " + client.nickname + " :Welcome to the IRCtic, " + client.nickname + "!";
+			client.knewPassword = true;
+			if (client.updateAuthStatus())
+				CompleteHandshake(clientId, server);
+			return "Authentication successful.";
 		}
 		return "Authentication failed.";
 	}
 
 	else if (parts[0] == "CAP")
 	{
+		std::string response;
 		if (parts.size() >= 2)
 		{
 			if (parts[1] == "LS")
-				return ":irctic.com CAP * LS :";
+				response += ":irctic.com CAP * LS :multi-prefix sasl\r\n";
 			else if (parts[1] == "REQ")
-				return ":irctic.com CAP * ACK :";
+				response += ":irctic.com CAP * ACK :multi-prefix sasl\r\n";
 		}
-		return ":irctic.com CAP * END :";
+		response += ":irctic.com CAP * END :\r\n";
+		return response;
 	}
 
 	else if (parts[0] == "PING")
@@ -62,28 +81,18 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 		return "PONG " + parts[1];
 	}
 
-	else if (parts[0] == "PONG")
-	{
-		if (partsSize < 2)
-			return "PING";
-		return "PING " + parts[1];
-	}
-
 	else if (parts[0] == "OPER") // AUTHENTICATE AS OPERATOR
 	{
 		if (partsSize != 2)
 			return std::string("Format: \"OPER <operator password>\".") + (client.isOperator ? " You are an operator. " : " You are not an operator.");
 		if (client.isOperator)
 			return "You are already an operator.";
-		if (client.username.empty())
-			return "Please set a username using USER before authenticating.";
-		if (client.nickname.empty())
-			return "Please set a nickname using NICK before authenticating.";
+		if (!client.isAuthenticated)
+			return "Please authenticate before becoming an operator.";
 
 		if (server.isCorrectOperatorPassword(parts[1]))
 		{
 			client.isOperator = true;
-			client.isAuthenticated = true;
 			return "Operator Authentication successful.";
 		}
 		return "Operator Authentication failed.";
@@ -100,6 +109,8 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 			if (c.nickname == parts[1])
 				return "Nickname already in use.";
 		client.nickname = parts[1];
+		if (client.updateAuthStatus())
+				CompleteHandshake(clientId, server);
 		return "Your nickname is now \"" + parts[1] + "\".";
 	}
 
@@ -114,6 +125,8 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 			if (c.username == parts[1])
 				return "Username already in use.";
 		client.username = parts[1];
+		if (client.updateAuthStatus())
+				CompleteHandshake(clientId, server);
 		return "Your username is now \"" + parts[1] + "\".";
 	}
 	else if (parts[0] == "JOIN") // JOIN OR CREATE A CHANNEL
