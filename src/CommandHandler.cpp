@@ -38,13 +38,38 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 		if (server.isCorrectPassword(parts[1]))
 		{
 			client.isAuthenticated = true;
-			return "Authentication successful.";
+			return ":irctic.com 001 " + client.nickname + " :Welcome to the IRCtic, " + client.nickname + "!\n";
 		}
 		return "Authentication failed.";
-
 	}
 
-	if (parts[0] == "OPER") // AUTHENTICATE AS OPERATOR
+	else if (parts[0] == "CAP")
+	{
+		if (parts.size() >= 2)
+		{
+			if (parts[1] == "LS")
+				return ":irctic.com CAP * LS :";
+			else if (parts[1] == "REQ")
+				return ":irctic.com CAP * ACK :";
+		}
+		return ":irctic.com CAP * END :";
+	}
+
+	else if (parts[0] == "PING")
+	{
+		if (partsSize < 2)
+			return "PONG";
+		return "PONG " + parts[1];
+	}
+
+	else if (parts[0] == "PONG")
+	{
+		if (partsSize < 2)
+			return "PING";
+		return "PING " + parts[1];
+	}
+
+	else if (parts[0] == "OPER") // AUTHENTICATE AS OPERATOR
 	{
 		if (partsSize != 2)
 			return std::string("Format: \"OPER <operator password>\".") + (client.isOperator ? " You are an operator. " : " You are not an operator.");
