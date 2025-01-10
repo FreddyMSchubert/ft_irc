@@ -103,6 +103,7 @@ std::string Socket::receiveData()
 		return "";
 	}
 
+	std::cout << "DATA: " << data << std::endl;
 	return data;
 }
 

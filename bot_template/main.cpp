@@ -62,7 +62,10 @@ void onMessage(std::string user, std::string channel, std::string message)
 	std::cout << "\tChannel: " << channel << "\n";
 	std::cout << "\tMessage: " << message << std::endl;
 
-	getBot().directMessage(user, "Hello! You said: " + message);
+	if (message == "ping")
+		getBot().sendMessage(channel, "pong");
+
+	// getBot().directMessage(user, "Hello! You said: " + message);
 }
 
 // custom function to handle disconnect

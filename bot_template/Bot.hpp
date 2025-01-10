@@ -46,8 +46,9 @@ class Socket
 		bool running = true;
 		bool error = false;
 
-		void setNonBlocking();
-		void sendMessage(std::string msg);
+		void _setNonBlocking();
+		void _sendMessage(std::string msg);
+		void _parseBuffer(std::string buffer);
 
 	public:
 		Socket();

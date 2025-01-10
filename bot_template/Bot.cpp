@@ -47,14 +47,9 @@ void Bot::connectToServer()
 
 void Bot::authenticate()
 {
-	std::cout << "Authenticating with:" << std::endl;
-	std::cout << "\tPASS: " << _password << std::endl;
-	std::cout << "\tNICK: " << _nick << std::endl;
-	std::cout << "\tUSER: " << _user << std::endl;
-
-	sendRawMessage("NICK " + _nick);
-	sendRawMessage("USER bot" + _user);
-	sendRawMessage("PASS " + _password);
+	socket.queueMessage("NICK " + _nick);
+	socket.queueMessage("USER bot_" + _user);
+	socket.queueMessage("PASS " + _password);
 }
 
 void Bot::directMessage(std::string user, std::string msg)

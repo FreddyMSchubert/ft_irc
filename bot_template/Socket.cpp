@@ -1,7 +1,10 @@
 #include "Bot.hpp"
+#include <iostream>
 #include <stdexcept>
 #include <readline/readline.h>
 #include <string>
+#include <unistd.h>
+#include <sstream>
 
 Socket::Socket()
 {
@@ -12,11 +15,11 @@ Socket::Socket()
 Socket::~Socket()
 {
 	if (!error)
-		this->sendMessage("QUIT");
+		this->_sendMessage("QUIT");
 	close(_socket_fd);
 }
 
-void Socket::setNonBlocking()
+void Socket::_setNonBlocking()
 {
 	int flags = fcntl(_socket_fd, F_GETFL, 0);
 	if (flags == -1)
@@ -60,7 +63,7 @@ void Socket::connectToServer(std::string ip, int port)
 		}
 		else
 		{
-			setNonBlocking();
+			_setNonBlocking();
 			std::cout << "Connected to server: " << ip << ":" << port << std::endl;
 		}
 
@@ -79,9 +82,14 @@ void Socket::queueMessage(std::string msg)
 	_messages.push(msg);
 }
 
-void Socket::sendMessage(std::string msg)
+void Socket::_sendMessage(std::string msg)
 {
-	ssize_t sent = send(_socket_fd, msg.c_str(), msg.length(), 0);
+	if (msg.empty())
+	{
+		_onErrorCallback("Message is empty");
+		return;
+	}
+	ssize_t sent = send(_socket_fd, msg.append("\r\n").c_str(), msg.length(), 0);
 	if (sent == -1)
 	{
 		if (errno == EPIPE)
@@ -105,8 +113,6 @@ void Socket::Run()
 	fds[0].fd = _socket_fd;
 	fds[0].events = POLLIN | POLLOUT;
 
-	setNonBlocking();
-
 	while (42)
 	{
 		int ret = poll(fds, 1, 50);
@@ -116,7 +122,6 @@ void Socket::Run()
 		{
 			if (fds[0].revents & POLLIN)
 			{
-				continue;
 				std::cout << "Message received from Socket:" << std::endl;
 				char buffer[1024] = {0};
 				std::memset(buffer, 0, sizeof(buffer));
@@ -135,8 +140,7 @@ void Socket::Run()
 				else
 				{
 					std::cout << "-> Data read from server: " << buffer << std::endl;
-					// TODO: Parse message and call onMessageCallback
-					_onMessageCallback("TestUser", "TestChannel", std::string(buffer));
+					_parseBuffer(std::string(buffer));
 				}
 			}
 			if (fds[0].revents & POLLOUT)
@@ -144,9 +148,37 @@ void Socket::Run()
 				if (_messages.empty()) continue;
 
 				std::cout << "Sending next message in queue!" << std::endl;
-				sendMessage(_messages.front());
+				_sendMessage(_messages.front());
 				_messages.pop();
+				usleep(8000);
 			}
 		}
 	}
+}
+
+// TODO: cant really do this with find
+void Socket::_parseBuffer(std::string buffer)
+{
+	if (buffer.find("Your username is now ") != std::string::npos)
+	{
+		std::cout << "Username set!" << std::endl;
+		return;
+	}
+	if (buffer.find("Your nickname is now ") != std::string::npos)
+	{
+		std::cout << "Nickname set!" << std::endl;
+		return;
+	}
+	if (buffer.find("Authentication failed.") != std::string::npos)
+	{
+		_onErrorCallback("Authentication failed.");
+		error = true;
+		return;
+	}
+
+	std::string user, channel, message;
+	std::istringstream iss(buffer);
+	iss >> user >> channel;
+	std::getline(iss, message);
+	_onMessageCallback(user, channel, message);
 }
