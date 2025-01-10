@@ -10,10 +10,9 @@ std::string Channel::addMember(unsigned int clientId, Server &server, bool wasIn
 		return "This channel is invite only.";
 	if (_kicked[clientId])
 		return "You have been kicked from this channel.";
-	size_t currMemberInChannel = 0; // TODO: here
+	size_t currMemberInChannel = 0;
 	for (const auto& member : _members)
-		if (member.second)
-			currMemberInChannel++;
+		currMemberInChannel += member.second;
 	if (limit > 0 && currMemberInChannel >= (size_t)limit)
 		return std::string("This channel is full. [") + std::to_string(currMemberInChannel) + "/" + std::to_string(limit) + " members]";
 	if (_members[clientId])
@@ -24,23 +23,10 @@ std::string Channel::addMember(unsigned int clientId, Server &server, bool wasIn
 
 	_members[clientId] = true;
 	Logger::Log(LogLevel::INFO, std::string("Added client ") + server.getClientNameById(clientId) + " to channel " + name + ".");
+	if (server.getClientById(clientId))
+		broadcast(":" + server.getClientNameById(clientId) + "!" + server.getClientById(clientId)->username + "@irctic.com JOIN " + name, server, -1);
 	return "You have joined " + name + ".";
 }
-
-void Channel::broadcast(std::string msg, Server &server, unsigned int except_id)
-{
-	for (const auto& member : _members)
-	{
-		unsigned int clientId = member.first;
-		if (clientId != except_id)
-		{
-			Client* client = server.getClientById(clientId);
-			if (client)
-				client->sendMessage(msg);
-		}
-	}
-}
-
 void Channel::removeMember(unsigned int clientId, Server &server)
 {
 	std::cout << "Removing member " << clientId << " from channel " << name << std::endl;
@@ -48,6 +34,22 @@ void Channel::removeMember(unsigned int clientId, Server &server)
 	Client * client = server.getClientById(clientId); 
 	if (client)
 		client->channel = nullptr;
+	if (server.getClientById(clientId))
+		broadcast(":" + server.getClientNameById(clientId) + "!" + server.getClientById(clientId)->username + "@irctic.com PART " + name, server, -1);
+}
+
+void Channel::broadcast(std::string msg, Server &server, unsigned int except_id)
+{
+	for (const auto& member : _members)
+	{
+		unsigned int clientId = member.first;
+		if (clientId != except_id && member.second)
+		{
+			Client* client = server.getClientById(clientId);
+			if (client)
+				client->sendMessage(msg);
+		}
+	}
 }
 
 void Channel::kick(unsigned int clientId, Server &server)

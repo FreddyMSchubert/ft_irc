@@ -146,51 +146,6 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 
 
 
-	else if (parts[0] == "NAMES") // LIST ALL PEOPLE / PEOPLE IN A CHANNEL
-	{
-		if (partsSize == 1)
-		{
-			std::string response = ":irctic.com 353 " + client.nickname + " = :"; // RPL_NAMREPLY
-			for (auto &channel : server.getChannels())
-			{
-				response += channel.name + " :";
-				for (auto &member : channel.getMembers())
-				{
-					if (member.second)
-					{
-						Client *cl = server.getClientById(member.first);
-						if (cl)
-							response += cl->nickname + " ";
-					}
-				}
-				response += "\r\n";
-			}
-			response += ":irctic.com 366 " + client.nickname + " :End of NAMES list"; // RPL_ENDOFNAMES
-			return response;
-		}
-		else if (partsSize >= 2)
-		{
-			Channel *channel = server.getChannel(parts[1]);
-			if (!channel)
-				return ":irctic.com 403 " + parts[1] + " :No such channel"; // ERR_NOSUCHCHANNEL
-			std::string response = ":irctic.com 353 " + client.nickname + " = " + channel->name + " :";
-			for (auto &member : channel->getMembers())
-			{
-				if (member.second)
-				{
-					Client *cl = server.getClientById(member.first);
-					if (cl)
-						response += cl->nickname + " ";
-				}
-			}
-			response += "\r\n";
-			response += ":irctic.com 366 " + client.nickname + " :End of NAMES list"; // RPL_ENDOFNAMES
-			return response;
-		}
-	}
-
-
-
 	else if (parts[0] == "JOIN") // JOIN OR CREATE A CHANNEL
 	{
 		if (!client.isAuthenticated)
@@ -224,7 +179,6 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 		if (channel->password != "" && (partsSize < 3 || parts[2] != channel->password))
 			return ":irctic.com 475 " + channelName + " :Cannot join channel (+k)\r\n"; // ERR_BADCHANNELKEY
 
-		channel->broadcast(":" + client.nickname + "!" + client.username + "@irctic.com JOIN " + channel->name, server, client.id);
 		std::string channelJoinReturn = channel->addMember(clientId, server);
 		client.channel = channel;
 
@@ -246,8 +200,6 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 			partMessage += " :" + parts[1];
 		partMessage += "\r\n";
 
-		if (client.channel)
-			client.channel->broadcast(":" + client.nickname + "!" + client.username + "@irctic.com PART " + client.channel->name, server, client.id);
 		client.channel->removeMember(clientId, server);
 		client.channel = nullptr;
 
