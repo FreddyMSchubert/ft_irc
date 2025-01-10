@@ -71,5 +71,5 @@ void onMessage(std::string user, std::string channel, std::string message)
 // custom function to handle disconnect
 void onDisconnect()
 {
-	std::cerr << "Disconnected from server: " << std::endl;
+	std::cerr << "Disconnected from server!" << std::endl;
 }

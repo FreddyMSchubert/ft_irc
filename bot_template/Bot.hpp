@@ -43,12 +43,14 @@ class Socket
 
 		int _socket_fd = -1;
 		struct sockaddr_in _socket;
-		bool running = true;
+		static volatile bool _running;
 		bool error = false;
 
 		void _setNonBlocking();
 		void _sendMessage(std::string msg);
 		void _parseBuffer(std::string buffer);
+
+		static void signalHandler(int signum);
 
 	public:
 		Socket();

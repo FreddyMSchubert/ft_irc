@@ -5,11 +5,36 @@
 #include <string>
 #include <unistd.h>
 #include <sstream>
+#include <csignal>
+#include <cstring>
+
+volatile bool Socket::_running = false;
+
+static std::vector<std::string> split(const std::string &str, char delim)
+{
+	std::vector<std::string> tokens;
+	std::stringstream ss(str);
+	std::string token;
+	while (std::getline(ss, token, delim))
+		tokens.push_back(token);
+	return tokens;
+}
+
+void Socket::signalHandler(int signum)
+{
+	std::cerr << "Caught signal: " << signum << std::endl;
+	_running = false;
+}
 
 Socket::Socket()
 {
 	_socket_ip = "";
 	_socket_port = -1;
+	std::signal(SIGINT, this->signalHandler);
+	std::signal(SIGTERM, signalHandler);
+	std::signal(SIGQUIT, signalHandler);
+	std::signal(SIGKILL, signalHandler);
+	std::signal(SIGSTOP, signalHandler);
 }
 
 Socket::~Socket()
@@ -95,7 +120,7 @@ void Socket::_sendMessage(std::string msg)
 		if (errno == EPIPE)
 		{
 			_onErrorCallback("Server closed the connection already. Unable to send message");
-			running = false;
+			_running = false;
 		}
 		else
 			_onErrorCallback("Failed to send message");
@@ -113,14 +138,15 @@ void Socket::Run()
 	fds[0].fd = _socket_fd;
 	fds[0].events = POLLIN | POLLOUT;
 
-	while (42)
+	_running = true;
+	while (_running)
 	{
 		int ret = poll(fds, 1, 50);
 		if (ret == -1)
 			_onErrorCallback("Poll error: " + std::string(strerror(errno)));
-		else if (ret > 0)
+		else if (ret > 0 && _running)
 		{
-			if (fds[0].revents & POLLIN)
+			if (fds[0].revents & POLLIN && _running)
 			{
 				std::cout << "Message received from Socket:" << std::endl;
 				char buffer[1024] = {0};
@@ -130,12 +156,13 @@ void Socket::Run()
 				{
 					std::cerr << "-> Server closed the connection" << std::endl;
 					_onDisconnectCallback();
-					break;
+					_running = false;
 				}
 				else if (valread < 0)
 				{
 					std::cerr << "-> Read error: " << strerror(errno) << std::endl;
 					_onErrorCallback("Read error: " + std::string(strerror(errno)));
+					_running = false;
 				}
 				else
 				{
@@ -143,7 +170,7 @@ void Socket::Run()
 					_parseBuffer(std::string(buffer));
 				}
 			}
-			if (fds[0].revents & POLLOUT)
+			if (fds[0].revents & POLLOUT && _running)
 			{
 				if (_messages.empty()) continue;
 
@@ -181,7 +208,7 @@ void Socket::_parseBuffer(std::string buffer)
 		return;
 	}
 
-	// TODO: implement proper parsing like pivmsg is formatted like name: message
+	// TODO: implement proper parsing like privmsg is formatted like name: message
 	std::string user, channel, message;
 	std::istringstream iss(buffer);
 	iss >> user >> channel;
