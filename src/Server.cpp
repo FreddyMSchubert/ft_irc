@@ -108,10 +108,10 @@ void Server::handleExistingConnections()
 		}
 		if (_sockets[i].states.read)
 		{
-			Logger::Log(LogLevel::INFO, "Reading data from client");
 			try
 			{
 				_sockets[i].inbuffer += _sockets[i].socket.receiveData();
+				std::cout << "Received: " << _sockets[i].inbuffer; // temporary, for irssi debugging
 			}
 			catch(const std::runtime_error &e)
 			{
@@ -123,7 +123,6 @@ void Server::handleExistingConnections()
 		}
 		if (_sockets[i].states.write && !_sockets[i].outbuffer.empty())
 		{
-			Logger::Log(LogLevel::INFO, "Sending response to client");
 			try
 			{
 				_sockets[i].socket.sendData(_sockets[i].outbuffer);
@@ -133,7 +132,6 @@ void Server::handleExistingConnections()
 			{
 				Logger::Log(LogLevel::ERROR, "Failed to send response: " + std::string(e.what()));
 			}
-			Logger::Log(LogLevel::INFO, "Response sent to client");
 			continue;
 		}
 	}

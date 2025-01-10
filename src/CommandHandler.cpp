@@ -38,7 +38,7 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 		if (server.isCorrectPassword(parts[1]))
 		{
 			client.isAuthenticated = true;
-			return ":irctic.com 001 " + client.nickname + " :Welcome to the IRCtic, " + client.nickname + "!\n";
+			return ":irctic.com 001 " + client.nickname + " :Welcome to the IRCtic, " + client.nickname + "!";
 		}
 		return "Authentication failed.";
 	}
@@ -194,6 +194,11 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 				}
 			}
 		}
+
+		if (msg.back() == '\n')
+			msg.pop_back();
+
+		Logger::Log(LogLevel::INFO, std::string(client.getName() + " sent a message to " + target + ": " + msg));
 
 		return std::string();
 	}
