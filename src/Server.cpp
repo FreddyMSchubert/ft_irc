@@ -148,14 +148,17 @@ void Server::HandleClientData(unsigned int clientId)
 	Client *client = getClientById(clientId);
 	if (!client)
 		return;
-	size_t newLinePos = client->inbuffer.find("\n");
-	if (newLinePos == std::string::npos)
-		return;
-	std::string line = client->inbuffer.substr(0, newLinePos);
-	client->inbuffer.erase(0, newLinePos + 1);
-	std::string response = CommandHandler::HandleCommand(line, clientId, *this);
-	if (!response.empty())
-		client->sendMessage(response + "\n");
+	while (true)
+	{
+		size_t newLinePos = client->inbuffer.find("\n");
+		if (newLinePos == std::string::npos)
+			return;
+		std::string line = client->inbuffer.substr(0, newLinePos);
+		client->inbuffer.erase(0, newLinePos + 1);
+		std::string response = CommandHandler::HandleCommand(line, clientId, *this);
+		if (!response.empty())
+			client->sendMessage(response + "\r\n");
+	}
 }
 
 Client * Server::getClientById(unsigned int id)
@@ -182,6 +185,13 @@ unsigned int Server::getClientIdByName(std::string name)
 		if (client.nickname == name)
 			return client.id;
 	return -1;
+}
+Client * Server::getClientByName(std::string name)
+{
+	unsigned int id = getClientIdByName(name);
+	if (id <= 0)
+		return nullptr;
+	return getClientById(id);
 }
 
 bool Server::isCorrectPassword(std::string passwordAttempt)
