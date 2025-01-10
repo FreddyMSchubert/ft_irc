@@ -72,9 +72,9 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 			return ":irctic.com 461 CAP :Not enough parameters\r\n"; // ERR_NEEDMOREPARAMS
 
 		if (parts[1] == "LS")
-			return ":irctic.com CAP * LS :multi-prefix sasl\r\n"; // RPL_CAPLS
+			return ":irctic.com CAP * LS :\r\n"; // RPL_CAPLS
 		else if (parts[1] == "REQ")
-			return ":irctic.com CAP * ACK :multi-prefix sasl\r\n"; // RPL_CAPACK
+			return ":irctic.com CAP * ACK :\r\n"; // RPL_CAPACK
 		else if (parts[1] == "END")
 			return ":irctic.com CAP * END :\r\n"; // RPL_CAPEND
 		return ":irctic.com 502 CAP :CAPABILLITIES command failed\r\n"; // ERR_NOPROTOOPT

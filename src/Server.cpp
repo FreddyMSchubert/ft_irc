@@ -153,7 +153,10 @@ void Server::HandleClientData(unsigned int clientId)
 		size_t newLinePos = client->inbuffer.find("\n");
 		if (newLinePos == std::string::npos)
 			return;
-		std::string line = client->inbuffer.substr(0, newLinePos);
+		size_t lineEnd = newLinePos;
+		if (newLinePos > 0 && client->inbuffer[newLinePos - 1] == '\r')
+			lineEnd = newLinePos - 1;
+		std::string line = client->inbuffer.substr(0, lineEnd);
 		client->inbuffer.erase(0, newLinePos + 1);
 		std::string response = CommandHandler::HandleCommand(line, clientId, *this);
 		if (!response.empty())
