@@ -211,8 +211,11 @@ bool Server::isCorrectOperatorPassword(std::string passwordAttempt)
 Channel *Server::getChannel(std::string channelName)
 {
 	for (auto& channel_ptr : _channels)
+	{
+		std::cout << channel_ptr.name << std::endl;
 		if (channel_ptr.name == channelName)
 			return &channel_ptr;
+	}
 	return nullptr;
 }
 void Server::createChannel(std::string channelName)

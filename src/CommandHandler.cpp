@@ -101,15 +101,14 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 			return ":irctic.com 451 * :You have not registered"; // ERR_NOTREGISTERED
 
 		Client *clientPtr = server.getClientByName(parts[1]);
-		if (server.isCorrectOperatorPassword(parts[2]))
+		if (server.isCorrectOperatorPassword(parts[2]) && clientPtr)
 		{
 			clientPtr->isOperator = true;
-			return ":irctic.com 381 * :You are now an IRC operator"; // RPL_YOUREOPER
+			return ":irctic.com 381 * :" + clientPtr->nickname + " is now an IRC operator"; // RPL_YOUREOPER
 		}
 		std::cout << "Typed operator password: \"" << parts[2] << "\"" << std::endl;
 		return ":irctic.com 464 * :Operator password incorrect"; // ERR_PASSWDMISMATCH
 	}
-
 
 
 	else if (parts[0] == "NICK") // SET NICKNAME
@@ -320,13 +319,13 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 	{
 		if (parts.size() != 3)
 			return ":irctic.com 461 INVITE :Not enough parameters"; // ERR_NEEDMOREPARAMS
-		Channel *channel = server.getChannel(parts[1]);
+		Channel *channel = server.getChannel(parts[2]);
 		if (!channel)
-			return ":irctic.com 403 " + parts[1] + " :No such channel"; // ERR_NOSUCHCHANNEL
+			return ":irctic.com 403 " + parts[2] + " :No such channel"; // ERR_NOSUCHCHANNEL
 		if (!client.isOperatorIn(channel))
-			return ":irctic.com 482 " + parts[1] + " :You're not channel operator"; // ERR_CHANOPRIVSNEEDED
+			return ":irctic.com 482 " + parts[2] + " :You're not channel operator"; // ERR_CHANOPRIVSNEEDED
 
-		std::string userToInvite = parts[2];
+		std::string userToInvite = parts[1];
 		Client *clientToInvite = server.getClientByName(userToInvite);
 		if (!clientToInvite)
 			return ":irctic.com 401 " + userToInvite + " :No such nick/channel"; // ERR_NOSUCHNICK
