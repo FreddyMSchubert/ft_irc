@@ -3,10 +3,10 @@
 #include <stdexcept>
 #include <unistd.h>
 
-void onMessage(std::string user, std::string channel, std::string message, Bot& bot);
-void onDisconnect(std::string reason, Bot& bot);
-void onConnect(std::string server, Bot &bot);
-void onError(std::string message, Bot &bot);
+void onMessage(std::string user, std::string channel, std::string message);
+void onDisconnect(std::string reason);
+void onConnect(std::string server);
+void onError(std::string message);
 
 Bot::Bot(std::string ip, int port, std::string password, std::string nick, std::string user)
 {
@@ -34,18 +34,12 @@ Bot::Bot(std::string ip, int port, std::string password, std::string nick, std::
 Bot::~Bot()
 {
 	// socket.queueMessage("QUIT");
-	if (socket)
-		delete socket;
 }
 
 void Bot::connectToServer()
 {
-	socket = new Socket(*this);
-	if (!socket)
-		throw std::runtime_error("Failed to create socket");
-
 	try {
-		socket->connectToServer(this->_ip, this->_port);
+		socket.connectToServer(this->_ip, this->_port);
 	} catch (std::exception& e) {
 		throw std::runtime_error(std::string(e.what()));
 	} 
@@ -58,63 +52,43 @@ void Bot::authenticate()
 	std::cout << "\tNICK: " << _nick << std::endl;
 	std::cout << "\tUSER: " << _user << std::endl;
 
-	sendRawMessage("PASS " + _password + "\r\n");
-	sendRawMessage("NICK " + _nick + "\r\n");
-	sendRawMessage("USER bot" + _user+ "\r\n");
+	sendRawMessage("NICK " + _nick);
+	sendRawMessage("USER bot" + _user);
+	sendRawMessage("PASS " + _password);
 }
 
 void Bot::directMessage(std::string user, std::string msg)
 {
-	if (socket)
-		socket->queueMessage("PRIVMSG " + user + " :" + msg);
-	else
-		std::cerr << "Error: Socket not initialized" << std::endl;
+	socket.queueMessage("PRIVMSG " + user + " :" + msg);
+
 }
 
 void Bot::sendRawMessage(std::string msg)
 {
-	if (socket)
-		socket->queueMessage(msg);
-	else
-		std::cerr << "Error: Socket not initialized" << std::endl;
+	socket.queueMessage(msg);
 }
 
 void Bot::sendMessage(std::string msg)
 {
-	if (socket)
-		socket->queueMessage("PRIVMSG " + _current_channel + " :" + msg);
-	else
-		std::cerr << "Error: Socket not initialized" << std::endl;
+	socket.queueMessage("PRIVMSG " + _current_channel + " " + msg);
+
 }
 
 void Bot::sendMessage(std::string channelname, std::string msg)
 {
-	if (socket)
-		socket->queueMessage("PRIVMSG " + channelname + " :" + msg);
-	else
-		std::cerr << "Error: Socket not initialized" << std::endl;
+	socket.queueMessage("PRIVMSG " + channelname + " :" + msg);
 }
 
 void Bot::changeChannel(std::string channel)
 {
-	if (socket)
-	{
-		socket->queueMessage("JOIN " + channel);
-		_current_channel = channel;
-	}
-	else
-		std::cerr << "Error: Socket not initialized" << std::endl;
+	socket.queueMessage("JOIN " + channel);
+	_current_channel = channel;
 }
 
 void Bot::changeChannel(std::string channel, std::string password)
 {
-	if (socket)
-	{
-		socket->queueMessage("JOIN " + channel + " " + password);
-		_current_channel = channel;
-	}
-	else
-		std::cerr << "Error: Socket not initialized" << std::endl;
+	socket.queueMessage("JOIN " + channel + " " + password);
+	_current_channel = channel;
 }
 
 void Bot::setCallbacks(onConnectCallback onConnect,
@@ -122,8 +96,13 @@ void Bot::setCallbacks(onConnectCallback onConnect,
 					onMessageCallback onMessage,
 					onDisconnectCallback onDisconnect)
 {
-	socket->setOnMessageCallback(onMessage);
-	socket->setOnDisconnectCallback(onDisconnect);
-	socket->setOnConnectCallback(onConnect);
-	socket->setOnErrorCallback(onError);
+	socket.setOnMessageCallback(onMessage);
+	socket.setOnDisconnectCallback(onDisconnect);
+	socket.setOnConnectCallback(onConnect);
+	socket.setOnErrorCallback(onError);
+}
+
+void Bot::startPollingForEvents()
+{
+	socket.Run();
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <queue>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -23,10 +24,10 @@
 
 class Bot;
 
-typedef std::function<void(std::string, std::string, std::string, Bot&)> onMessageCallback; //channel, user, message, botRef
-typedef std::function<void(Bot&)> onDisconnectCallback;
-typedef std::function<void(Bot&)> onConnectCallback;
-typedef std::function<void(std::string, Bot&)> onErrorCallback;
+typedef std::function<void(std::string, std::string, std::string)> onMessageCallback; //channel, user, message, botRef
+typedef std::function<void(void)> onDisconnectCallback;
+typedef std::function<void(void)> onConnectCallback;
+typedef std::function<void(std::string)> onErrorCallback;
 
 class Socket
 {
@@ -38,9 +39,7 @@ class Socket
 
 		std::string					_socket_ip;
 		int							_socket_port;
-		std::vector<std::string>	_messages;
-
-		Bot &_botRef;
+		std::queue<std::string>	_messages;
 
 		int _socket_fd = -1;
 		struct sockaddr_in _socket;
@@ -51,7 +50,7 @@ class Socket
 		void sendMessage(std::string msg);
 
 	public:
-		Socket(Bot &bot);
+		Socket();
 		~Socket();
 
 		void connectToServer(std::string ip, int port);
@@ -80,11 +79,14 @@ class Bot
 		std::string	_user = "bot";
 
 		//socket
-		Socket *socket = nullptr;
+		Socket socket;
 
 	public:
 		Bot(std::string ip, int port, std::string password, std::string nick, std::string user);
 		~Bot();
+
+		Bot(const Bot &bot) = delete;
+		Bot &operator=(const Bot &bot) = delete;
 
 		void connectToServer();
 		void authenticate();
@@ -99,4 +101,6 @@ class Bot
 					onErrorCallback onError,
 					onMessageCallback onMessage,
 					onDisconnectCallback onDisconnect);
+
+		void startPollingForEvents();
 };

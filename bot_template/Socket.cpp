@@ -1,7 +1,9 @@
 #include "Bot.hpp"
 #include <stdexcept>
+#include <readline/readline.h>
+#include <string>
 
-Socket::Socket(Bot &bot) : _botRef(bot)
+Socket::Socket()
 {
 	_socket_ip = "";
 	_socket_port = -1;
@@ -52,26 +54,29 @@ void Socket::connectToServer(std::string ip, int port)
 			if (errno != EINPROGRESS)
 			{
 				close(_socket_fd);
-				_onErrorCallback("Failed to connect to server: " + std::string(strerror(errno)), _botRef);
+				_onErrorCallback("Failed to connect to server: " + std::string(strerror(errno)));
 				throw std::runtime_error("Failed to connect to server: " + std::string(strerror(errno)));
 			}
 		}
 		else
 		{
+			setNonBlocking();
 			std::cout << "Connected to server: " << ip << ":" << port << std::endl;
 		}
+
+
 	}
 	catch(const std::exception &e)
 	{
 		throw std::runtime_error(e.what());
 	}
-	_onConnectCallback(_botRef);
+	_onConnectCallback();
 }
 
 void Socket::queueMessage(std::string msg)
 {
 	std::cout << "Queuing message: " << msg << std::endl;
-	_messages.emplace_back(msg);
+	_messages.push(msg);
 }
 
 void Socket::sendMessage(std::string msg)
@@ -81,11 +86,11 @@ void Socket::sendMessage(std::string msg)
 	{
 		if (errno == EPIPE)
 		{
-			_onErrorCallback("Server closed the connection already. Unable to send message", _botRef);
+			_onErrorCallback("Server closed the connection already. Unable to send message");
 			running = false;
 		}
 		else
-			_onErrorCallback("Failed to send message", _botRef);
+			_onErrorCallback("Failed to send message");
 	}
 	else if (sent < msg.length())
 		std::cerr << "Warning: Partial message sent: " << sent << " of " << msg.length() << " bytes" << std::endl;
@@ -102,45 +107,45 @@ void Socket::Run()
 
 	setNonBlocking();
 
-	while (running)
+	while (42)
 	{
 		int ret = poll(fds, 1, 50);
 		if (ret == -1)
-			_onErrorCallback("Poll error: " + std::string(strerror(errno)), _botRef);
+			_onErrorCallback("Poll error: " + std::string(strerror(errno)));
 		else if (ret > 0)
 		{
 			if (fds[0].revents & POLLIN)
 			{
+				continue;
 				std::cout << "Message received from Socket:" << std::endl;
 				char buffer[1024] = {0};
 				std::memset(buffer, 0, sizeof(buffer));
-				int valread = read(fds[0].fd, buffer, sizeof(buffer) - 1);
+				int valread = read(_socket_fd, buffer, sizeof(buffer) - 1);
 				if (valread == 0)
 				{
 					std::cerr << "-> Server closed the connection" << std::endl;
-					_onDisconnectCallback(_botRef);
+					_onDisconnectCallback();
 					break;
 				}
 				else if (valread < 0)
 				{
 					std::cerr << "-> Read error: " << strerror(errno) << std::endl;
-					_onErrorCallback("Read error: " + std::string(strerror(errno)), _botRef);
+					_onErrorCallback("Read error: " + std::string(strerror(errno)));
 				}
 				else
 				{
 					std::cout << "-> Data read from server: " << buffer << std::endl;
 					// TODO: Parse message and call onMessageCallback
-					_onMessageCallback("TestUser", "TestChannel", std::string(buffer), _botRef);
+					_onMessageCallback("TestUser", "TestChannel", std::string(buffer));
 				}
 			}
 			if (fds[0].revents & POLLOUT)
 			{
+				if (_messages.empty()) continue;
+
 				std::cout << "Sending next message in queue!" << std::endl;
-				if (!_messages.empty())
-				{
-					sendMessage(_messages.front());
-					_messages.erase(_messages.begin());
-				}
+				sendMessage(_messages.front());
+				_messages.pop();
 			}
 		}
 	}
