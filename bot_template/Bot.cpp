@@ -48,7 +48,7 @@ void Bot::connectToServer()
 void Bot::authenticate()
 {
 	socket.queueMessage("NICK " + _nick);
-	socket.queueMessage("USER bot_" + _user);
+	socket.queueMessage("USER bot_" + _user + " osdjfiojdsf sdojfoijsdjsdfo");
 	socket.queueMessage("PASS " + _password);
 }
 

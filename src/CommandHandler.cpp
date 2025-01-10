@@ -52,14 +52,14 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 		if (partsSize != 2)
 			return ":irctic.com 461 PASS :Not enough parameters\r\n"; // ERR_NEEDMOREPARAMS
 		if (client.knewPassword)
-			return ":irctic.com 462 * :You may not reregister\r\n"; // ERR_ALREADYREGISTRED
+			return ":irctic.com 462 * :You already inputted the password correctly.\r\n"; // ERR_ALREADYREGISTRED
 
 		if (server.isCorrectPassword(parts[1]))
 		{
 			client.knewPassword = true;
 			if (client.updateAuthStatus())
 				CompleteHandshake(clientId, server);
-			return ":irctic.com 900 * :Authentication successful\r\n"; // Custom success reply
+			return ":irctic.com 900 * :Password correct\r\n"; // Custom success reply
 		}
 		return ":irctic.com 464 * :Password incorrect\r\n"; // ERR_PASSWDMISMATCH
 	}
@@ -130,7 +130,7 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 
 	else if (parts[0] == "USER") // SET USERNAME
 	{
-		if (partsSize < 4)
+		if (partsSize < 2)
 			return ":irctic.com 461 USER :Not enough parameters\r\n"; // ERR_NEEDMOREPARAMS
 		if (parts[1][0] == '#')
 			return ":irctic.com 432 * " + parts[1] + " :Erroneous username\r\n"; // ERR_ERRONEUSNICKNAME

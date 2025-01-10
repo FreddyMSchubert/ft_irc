@@ -20,18 +20,17 @@ Bot &getBot()
 
 int main(int argc, char *argv[])
 {
-    
 	Bot &bot = getBot();
-    bot.setCallbacks(onConnect, onError, onMessage, onDisconnect);
+	bot.setCallbacks(onConnect, onError, onMessage, onDisconnect);
 
-    try {
-        bot.connectToServer();
-    } catch (std::exception& e) {
-        std::cerr << e.what() << std::endl;
-        return 1;
-    }
+	try {
+		bot.connectToServer();
+	} catch (std::exception& e) {
+		std::cerr << e.what() << std::endl;
+		return 1;
+	}
 
-    return 0;
+	return 0;
 }
 
 // custom function to handle connection
