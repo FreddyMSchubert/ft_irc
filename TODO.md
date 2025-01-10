@@ -1,1 +1,3 @@
 - do double check - verify we always check errno and do poll check before read write
+
+- reconnecting has small problemos
