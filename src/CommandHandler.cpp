@@ -210,7 +210,7 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 
 
 
-	else if (parts[0] == "PRIVMSG" || parts[0] == "MSG") // MESSAGE PEOPLE
+	else if (parts[0] == "PRIVMSG" || parts[0] == "MSG")
 	{
 		if (!client.isAuthenticated)
 			return ":irctic.com 451 PRIVMSG :You have not registered"; // ERR_NOTREGISTERED
@@ -227,27 +227,14 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 		}
 		msg += "\r\n";
 
-		// Detect if the message is a CTCP DCC command:
 		if (msg.size() > 4 && msg.rfind("\x01" "DCC ", 0) == 0)
 		{
-			// It's a DCC request inside a CTCP!
-			// For example: \x01DCC SEND test.txt 2130706433 1234 1024\x01
-			// We remove the leading \x01 and trailing \x01
 			std::string dccCommand = msg.substr(1, msg.size() - 2); // remove \x01's
-			// Now dccCommand should be "DCC SEND test.txt <ip> <port> <size>"
-			// We'll parse it further:
-			// Splitting on spaces:
-			//  dccParts[0] = "DCC"
-			//  dccParts[1] = "SEND"
-			//  dccParts[2] = "test.txt"
-			//  dccParts[3] = "<ip>"
-			//  dccParts[4] = "<port>"
-			//  dccParts[5] = "<filesize>"
 			std::vector<std::string> dccParts = split(dccCommand, ' ');
 			if (dccParts.size() < 3)
 				return ":irctic.com 461 DCC :Not enough parameters for DCC"; // ERR_NEEDMOREPARAMS
 
-			std::string dccType = dccParts[1]; // "SEND" or "CHAT" maybe
+			std::string dccType = dccParts[1];
 			if (dccType == "SEND" && dccParts.size() >= 5)
 			{
 				std::string fileName = dccParts[2];
@@ -255,37 +242,26 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 				std::string portStr  = dccParts[4];
 				std::string fileSize = (dccParts.size() >= 6) ? dccParts[5] : "Unknown";
 
-				// If you want to do any server-side logging:
 				Logger::Log(LogLevel::INFO, "DCC SEND request from " + client.getName() + 
 											" => File: " + fileName +
 											", IP: " + ipStr + 
 											", Port: " + portStr + 
 											", FileSize: " + fileSize);
-				// Now forward the DCC to the target user if it isn't to a channel:
 				if (target[0] != '#')
 				{
 					Client *targetClientPtr = server.getClientByName(target);
 					if (!targetClientPtr)
 						return ":irctic.com 401 " + target + " :No such nick/channel"; // ERR_NOSUCHNICK
-					// Rebuild the CTCP message to forward:
-					std::string forwardMsg = ":" + client.nickname + "!" + client.username + "@irctic.com "
-						+ "PRIVMSG " + target + " :" + CTCP_DELIMITER
-						+ dccCommand 
-						+ CTCP_DELIMITER + "\r\n";
-					targetClientPtr->sendMessage(forwardMsg);
+					std::string forwardMessage = ":irctic.com 401 ";
+
+					targetClientPtr->sendMessage(":irctic.com 200 PRIVMSG " + targetClientPtr->nickname + " " + parts[2] + " :Kicked");
 					return ""; // no direct server response to the sender
 				}
 				else
-				{
-					// DCC to a channel is unusual, but let's just respond with an error or ignore
 					return ":irctic.com 400 " + target + " :Cannot DCC SEND to a channel";
-				}
 			}
 			else
-			{
-				// Could also handle "CHAT" or others
 				return ":irctic.com 400 DCC :Unsupported DCC command";
-			}
 		}
 
 		if (target[0] == '#')
