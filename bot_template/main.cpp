@@ -62,8 +62,8 @@ void onMessage(std::string user, std::string channel, std::string message)
 	std::cout << "\tChannel: " << channel << "\n";
 	std::cout << "\tMessage: " << message << std::endl;
 
-	if (message == "ping")
-		getBot().sendMessage(channel, "pong");
+	if (channel == "ping")
+		getBot().sendMessage(user.substr(0, user.length() - 1), "pong");
 
 	// getBot().directMessage(user, "Hello! You said: " + message);
 }

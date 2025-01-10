@@ -89,7 +89,7 @@ void Socket::_sendMessage(std::string msg)
 		_onErrorCallback("Message is empty");
 		return;
 	}
-	ssize_t sent = send(_socket_fd, msg.append("\r\n").c_str(), msg.length(), 0);
+	ssize_t sent = send(_socket_fd, msg.append("\n").c_str(), msg.length(), 0);
 	if (sent == -1)
 	{
 		if (errno == EPIPE)
@@ -175,7 +175,13 @@ void Socket::_parseBuffer(std::string buffer)
 		error = true;
 		return;
 	}
+	if (buffer.find("Authentication successful") != std::string::npos)
+	{
+		std::cout << "Authentication successful!" << std::endl;
+		return;
+	}
 
+	// TODO: implement proper parsing like pivmsg is formatted like name: message
 	std::string user, channel, message;
 	std::istringstream iss(buffer);
 	iss >> user >> channel;
