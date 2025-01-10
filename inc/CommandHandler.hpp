@@ -12,4 +12,7 @@ class CommandHandler
 {
 	public:
 		static std::string HandleCommand(std::string inCommand, unsigned int clientId, Server & server);
+
+	private:
+		static std::string CompleteHandshake(unsigned int clientId, Server & server);
 };

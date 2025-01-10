@@ -1,1 +1,1 @@
-- do double check
+- do double check - verify we always check errno and do poll check before read write

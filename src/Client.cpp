@@ -58,3 +58,9 @@ void Client::sendMessage(std::string msg)
 {
 	outbuffer += msg;
 }
+
+bool Client::updateAuthStatus()
+{
+	isAuthenticated = !nickname.empty() && !username.empty() && knewPassword;
+	return isAuthenticated;
+}

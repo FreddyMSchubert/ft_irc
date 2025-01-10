@@ -34,7 +34,6 @@ Socket::Socket(int port) : _port(port)
 			throw std::runtime_error("Failed to listen on socket");
 		}
 
-		Logger::Log(LogLevel::INFO, "Socket " + std::to_string(_socket_fd) + " connected!");
 		setNonBlocking();
 	}
 	catch(const std::exception &e)
@@ -47,7 +46,6 @@ Socket::Socket(int fd, int port) : _port(port)
 {
 	_socket_fd = fd;
 	setNonBlocking();
-	Logger::Log(LogLevel::INFO, "Running Client Connection Socket " + std::to_string(_socket_fd) + "...");
 }
 
 Socket::Socket(Socket&& other) noexcept
@@ -74,7 +72,6 @@ Socket::~Socket()
 	if (_socket_fd >= 0)
 	{
 		close(_socket_fd);
-		Logger::Log(LogLevel::INFO, "Socket " + std::to_string(_socket_fd) + " closed");
 	}
 }
 
@@ -83,8 +80,6 @@ void Socket::sendData(const std::string & data)
 	ssize_t sent = send(_socket_fd, data.c_str(), data.length(), 0);
 	if (sent < 0)
 		throw std::runtime_error("Failed to send data");
-	else
-		Logger::Log(LogLevel::INFO, "Data sent!");
 }
 
 std::string Socket::receiveData()

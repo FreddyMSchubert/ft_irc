@@ -12,117 +12,172 @@ static std::vector<std::string> split(const std::string &str, char delim)
 	return tokens;
 }
 
+std::string CommandHandler::CompleteHandshake(unsigned int clientId, Server & server)
+{
+	Client *clientPtr = server.getClientById(clientId);
+	if (!clientPtr)
+		return "Client not found\r\n";
+	Client &client = *clientPtr;
+
+	if (client.isAuthenticated && !client.hasReceivedWelcome)
+	{
+		std::string welcomeMsg = ":irctic.com 001 " + client.nickname + " :Welcome to the IRCtic, " + client.nickname + "!\r\n";
+		client.sendMessage(welcomeMsg);
+		client.hasReceivedWelcome = true;
+		Logger::Log(LogLevel::INFO, "Sent RPL_WELCOME to " + client.nickname);
+		return welcomeMsg;
+	}
+
+	return "";
+}
+
 std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int clientId, Server & server)
 {
 	Client *clientPtr = server.getClientById(clientId);
 	if (!clientPtr)
-		return "Client not found";
+		return ":irctic.com 401 * :No such nick/channel\r\n"; // ERR_NOSUCHNICK
 	Client &client = *clientPtr;
+
+	Logger::Log(LogLevel::INFO, "Received command from " + client.getName() + ": " + inCommand);
 
 	std::vector<std::string> parts = split(inCommand, ' ');
 	int partsSize = parts.size();
 	if (parts.empty())
-		return "Error reading command";
+		return ":irctic.com 421 " + parts[0] + " :Unknown command\r\n"; // ERR_UNKNOWNCOMMAND
+
+
 
 	if (parts[0] == "PASS") // AUTHENTICATE
 	{
 		if (partsSize != 2)
-			return std::string("Format: \"PASS <password>\".") + (client.isAuthenticated ? " You are authenticated. " : " You are not authenticated.");
-		if (client.isAuthenticated)
-			return "You are already authenticated.";
-		if (client.username.empty())
-			return "Please set a username using USER before authenticating.";
-		if (client.nickname.empty())
-			return "Please set a nickname using NICK before authenticating.";
+			return ":irctic.com 461 PASS :Not enough parameters\r\n"; // ERR_NEEDMOREPARAMS
+		if (client.knewPassword)
+			return ":irctic.com 462 * :You may not reregister\r\n"; // ERR_ALREADYREGISTRED
 
 		if (server.isCorrectPassword(parts[1]))
 		{
-			client.isAuthenticated = true;
-			return "Authentication successful.";
+			client.knewPassword = true;
+			if (client.updateAuthStatus())
+				CompleteHandshake(clientId, server);
+			return ":irctic.com 900 * :Authentication successful\r\n"; // Custom success reply
 		}
-		return "Authentication failed.";
-
+		return ":irctic.com 464 * :Password incorrect\r\n"; // ERR_PASSWDMISMATCH
 	}
 
-	if (parts[0] == "OPER") // AUTHENTICATE AS OPERATOR
+
+
+	else if (parts[0] == "CAP") // CAPABILITY NEGOTIATION
+	{
+		if (parts.size() < 2)
+			return ":irctic.com 461 CAP :Not enough parameters\r\n"; // ERR_NEEDMOREPARAMS
+
+		if (parts[1] == "LS")
+			return ":irctic.com CAP * LS :\r\n"; // RPL_CAPLS
+		else if (parts[1] == "REQ")
+			return ":irctic.com CAP * ACK :\r\n"; // RPL_CAPACK
+		else if (parts[1] == "END")
+			return ":irctic.com CAP * END :\r\n"; // RPL_CAPEND
+		return ":irctic.com 502 CAP :CAPABILLITIES command failed\r\n"; // ERR_NOPROTOOPT
+	}
+
+
+
+	else if (parts[0] == "PING") // are you there?
+	{
+		if (partsSize < 2)
+			return ":irctic.com PONG irctic.com\r\n"; // Standard PONG response
+		return ":irctic.com PONG irctic.com :" + parts[1] + "\r\n"; // PONG with payload
+	}
+
+
+
+	else if (parts[0] == "OPER") // AUTHENTICATE AS OPERATOR
 	{
 		if (partsSize != 2)
-			return std::string("Format: \"OPER <operator password>\".") + (client.isOperator ? " You are an operator. " : " You are not an operator.");
+			return ":irctic.com 461 OPER :Not enough parameters\r\n"; // ERR_NEEDMOREPARAMS
 		if (client.isOperator)
-			return "You are already an operator.";
-		if (client.username.empty())
-			return "Please set a username using USER before authenticating.";
-		if (client.nickname.empty())
-			return "Please set a nickname using NICK before authenticating.";
+			return ":irctic.com 462 * :You are already an IRC operator\r\n"; // ERR_ALREADYREGISTRED
+		if (!client.isAuthenticated)
+			return ":irctic.com 451 * :You have not registered\r\n"; // ERR_NOTREGISTERED
 
 		if (server.isCorrectOperatorPassword(parts[1]))
 		{
 			client.isOperator = true;
-			client.isAuthenticated = true;
-			return "Operator Authentication successful.";
+			return ":irctic.com 381 * :You are now an IRC operator\r\n"; // RPL_YOUREOPER
 		}
-		return "Operator Authentication failed.";
+		return ":irctic.com 464 * :Operator password incorrect\r\n"; // ERR_PASSWDMISMATCH
 	}
+
+
 
 	else if (parts[0] == "NICK") // SET NICKNAME
 	{
 		if (partsSize != 2)
-			return std::string("Format: \"NICK <new nickname>\".") + (client.nickname.empty() ? " You currently don't have a nickname." : " Your current nickname is: \"" + client.nickname + "\".");
+			return ":irctic.com 461 NICK :Not enough parameters\r\n"; // ERR_NEEDMOREPARAMS
 		if (parts[1][0] == '#')
-			return "Nicknames can't start with \"#\"";
+			return ":irctic.com 432 * " + parts[1] + " :Erroneous nickname\r\n"; // ERR_ERRONEUSNICKNAME
 
 		for (auto &c : server.getClients())
 			if (c.nickname == parts[1])
-				return "Nickname already in use.";
+				return ":irctic.com 433 * " + parts[1] + " :Nickname is already in use\r\n"; // ERR_NICKNAMEINUSE
 		client.nickname = parts[1];
-		return "Your nickname is now \"" + parts[1] + "\".";
+		if (client.updateAuthStatus())
+				CompleteHandshake(clientId, server);
+		return ":irctic.com NICK " + client.nickname + "\r\n"; // NICK change broadcast
 	}
+
+
 
 	else if (parts[0] == "USER") // SET USERNAME
 	{
-		if (partsSize != 2)
-			return std::string("Format: \"USER <new username>\".") + (client.username.empty() ? " You currently don't have a username." : " Your current username is: \"" + client.username + "\".");
+		if (partsSize < 4)
+			return ":irctic.com 461 USER :Not enough parameters\r\n"; // ERR_NEEDMOREPARAMS
 		if (parts[1][0] == '#')
-			return "Usernames can't start with \"#\"";
+			return ":irctic.com 432 * " + parts[1] + " :Erroneous username\r\n"; // ERR_ERRONEUSNICKNAME
 
 		for (auto &c : server.getClients())
 			if (c.username == parts[1])
-				return "Username already in use.";
+				return ":irctic.com 464 * :Username is already in use\r\n"; // Custom error for duplicate username
 		client.username = parts[1];
+		if (client.updateAuthStatus())
+				CompleteHandshake(clientId, server);
 		return "Your username is now \"" + parts[1] + "\".";
 	}
+
+
+
 	else if (parts[0] == "JOIN") // JOIN OR CREATE A CHANNEL
 	{
 		if (!client.isAuthenticated)
-			return "Please authenticate using PASS before joining a channel.";
+			return ":irctic.com 451 JOIN :You have not registered\r\n"; // ERR_NOTREGISTERED
 		if (partsSize < 2 || partsSize > 3)
 		{
-			std::string response = "Format: \"JOIN <channel name> <channel password if necessary>\".\n";
+			std::string response = ":irctic.com 461 JOIN :Not enough parameters\r\n"; // ERR_NEEDMOREPARAMS
 			if (client.channel)
-				response += "You are currently in channel " + client.channel->name + ".\n";
+				response += ":irctic.com 442 " + client.channel->name + " :You are already on channel\r\n"; // ERR_USERONCHANNEL
 			if (server.getChannels().size() > 0)
 			{
-				response += "Joinable channels:   ";
+				response += ":irctic.com 353 " + client.nickname + " = :"; // RPL_NAMREPLY
 				for (auto &channel : server.getChannels())
-					response += channel.name + ", ";
-				response.pop_back();
-				response.pop_back();
+					response += channel.name + " ";
+				response += "\r\n";
+				response += ":irctic.com 366 " + client.nickname + " :End of NAMES list\r\n"; // RPL_ENDOFNAMES
 			}
 			return response;
 		}
-		
+
 		std::string channelName = parts[1];
 		Channel *channel = server.getChannel(channelName);
 		if (!channel)
 		{
 			if (channelName[0] != '#')
-				return "Channel names must start with \"#\"";
+				return ":irctic.com 476 " + channelName + " :Invalid channel name\r\n"; // ERR_BADCHANMASK
 			server.createChannel(channelName);
 			channel = server.getChannel(channelName);
 		}
 
 		if (channel->password != "" && (partsSize < 3 || parts[2] != channel->password))
-			return "Incorrect or missing password for channel " + channel->name + ".";
+			return ":irctic.com 475 " + channelName + " :Cannot join channel (+k)\r\n"; // ERR_BADCHANNELKEY
 
 		std::string channelJoinReturn = channel->addMember(clientId, server);
 		client.channel = channel;
@@ -130,188 +185,207 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 		return channelJoinReturn;
 	}
 
+
+
 	else if (parts[0] == "PRIVMSG" || parts[0] == "MSG") // MESSAGE PEOPLE
 	{
 		if (!client.isAuthenticated)
-			return "Please authenticate using PASS before messaging people.";
+			return ":irctic.com 451 PRIVMSG :You have not registered\r\n"; // ERR_NOTREGISTERED
 		if (partsSize < 3)
-			return "Format: \"PRIVMSG <channel name or person nickname> <message>";
+			return ":irctic.com 412 PRIVMSG :No text to send\r\n"; // ERR_NOTEXTTOSEND
 
 		std::string target = parts[1];
-		std::string msg = client.getName() + ": ";
+		std::string msg = ":" + client.nickname + "!" + client.username + "@irctic.com PRIVMSG " + target + " :";
 		for (size_t i = 2; i < parts.size(); i++)
 		{
 			msg += parts[i];
 			if (i < parts.size() - 1)
 				msg += " ";
 		}
-		msg += "\n";
+		msg += "\r\n";
 
 		if (target[0] == '#')
 		{
 			Channel *channel = server.getChannel(target);
 			if (!channel)
-				return ("Channel not found");
+				return ":irctic.com 403 " + target + " :No such channel\r\n"; // ERR_NOSUCHCHANNEL
 			channel->broadcast(msg, server, client.id);
 		}
 		else if (target != client.nickname)
 		{
 			std::cout << "Sending message to " << target << std::endl;
-			std::vector<Client> &clients = server.getClients();
-			for (auto &c : clients)
-			{
-				std::cout << "Checking " << c.nickname << std::endl;
-				if (c.nickname == target)
-				{
-					if (!c.isAuthenticated)
-						return "Message not sent. The target is not authenticated.";
-					c.sendMessage(msg);
-				}
-			}
+			Client *targetClientPtr = server.getClientByName(target);
+			if (!targetClientPtr)
+				return ":irctic.com 401 " + target + " :No such nick/channel\r\n"; // ERR_NOSUCHNICK
+			if (!targetClientPtr->isAuthenticated)
+				return ":irctic.com 401 " + target + " :No such nick/channel\r\n"; // ERR_NOSUCHNICK
+			targetClientPtr->sendMessage(msg);
 		}
+
+		if (msg.back() == '\n')
+			msg.pop_back();
+
+		Logger::Log(LogLevel::INFO, std::string(client.getName() + " sent a message to " + target + ": " + msg));
 
 		return std::string();
 	}
 
+
+
 	else if (parts[0] == "KICK")
 	{
 		if (parts.size() != 3)
-			return "Format: \"KICK <channel name> <client nickname>\"";
+			return ":irctic.com 461 KICK :Not enough parameters\r\n"; // ERR_NEEDMOREPARAMS
 		Channel *channel = server.getChannel(parts[1]);
 		if (!channel)
-			return "Channel not found";
+			return ":irctic.com 403 " + parts[1] + " :No such channel\r\n"; // ERR_NOSUCHCHANNEL
 		if (!client.isOperatorIn(channel))
-			return "You must be an operator to kick someone.";
+			return ":irctic.com 482 " + parts[1] + " :You're not channel operator\r\n"; // ERR_CHANOPRIVSNEEDED
 
-		std::string userToKick = parts[2];
-		unsigned int clientIdToKick = 0;
-		for (auto &c : server.getClients())
-			if (c.nickname == userToKick)
-				clientIdToKick = c.id;
-		channel->kick(clientIdToKick, server);
+		Client *clientToKick = server.getClientByName(parts[2]);
+		if (!clientToKick)
+			return ":irctic.com 401 " + parts[2] + " :No such nick/channel\r\n"; // ERR_NOSUCHNICK
+		channel->kick(clientToKick->id, server);
 
-		if (server.getClientById(clientIdToKick))
-			server.getClientById(clientIdToKick)->sendMessage("You have been kicked from " + channel->name + ".\n");
-		return "Kicked " + userToKick + " from " + channel->name + ".";
+		clientToKick->sendMessage("You have been kicked from " + channel->name + ".\n");
+		return ":irctic.com 200 KICK " + channel->name + " " + parts[2] + " :Kicked\r\n"; // Custom success reply
 	}
+
+
 
 	else if (parts[0] == "INVITE")
 	{
 		if (parts.size() != 3)
-			return "Format: \"INVITE <channel name> <client nickname>\"";
+			return ":irctic.com 461 INVITE :Not enough parameters\r\n"; // ERR_NEEDMOREPARAMS
 		Channel *channel = server.getChannel(parts[1]);
 		if (!channel)
-			return "Channel not found";
+			return ":irctic.com 403 " + parts[1] + " :No such channel\r\n"; // ERR_NOSUCHCHANNEL
 		if (!client.isOperatorIn(channel))
-			return "You must be an operator to invite someone.";
+			return ":irctic.com 482 " + parts[1] + " :You're not channel operator\r\n"; // ERR_CHANOPRIVSNEEDED
 
 		std::string userToInvite = parts[2];
-		unsigned int clientIdToInvite = 0;
-		for (auto &c : server.getClients())
-			if (c.nickname == userToInvite)
-				clientIdToInvite = c.id;
-		channel->unkick(clientIdToInvite);
-		channel->addMember(clientIdToInvite, server);
+		Client *clientToInvite = server.getClientByName(userToInvite);
+		if (!clientToInvite)
+			return ":irctic.com 401 " + userToInvite + " :No such nick/channel\r\n"; // ERR_NOSUCHNICK
+		channel->unkick(clientToInvite->id);
+		channel->addMember(clientToInvite->id, server);
 
-		if (server.getClientById(clientIdToInvite))
-			if (!server.getClientById(clientIdToInvite)->isAuthenticated)
-				return "Invited " + userToInvite + " to " + channel->name + ". Be warned that they are not authenticated.";
-
-		if (server.getClientById(clientIdToInvite))
-			server.getClientById(clientIdToInvite)->sendMessage("You have been invited to " + channel->name + ".\n");
+		clientToInvite->sendMessage(":irctic.com INVITE " + userToInvite + " " + channel->name + " :You've been invited to the channel\r\n"); // RPL_INVITE
 		return "Invited " + userToInvite + " to " + channel->name + ".";
 	}
+
+
 
 	else if (parts[0] == "TOPIC")
 	{
 		if (parts.size() != 3)
 		{
 			if (client.channel && client.channel->topic != "")
-				return std::string("Format: \"TOPIC <channel name> <new topic>\" - Current topic: ") + client.channel->topic;
-			return "Format: \"TOPIC <channel name> <new topic>\"";
+				return ":irctic.com 331 " + client.channel->name + " :" + client.channel->topic + "\r\n"; // RPL_NOTOPIC
+			return ":irctic.com 461 TOPIC :Not enough parameters\r\n"; // ERR_NEEDMOREPARAMS
 		}
 
 		Channel *channel = server.getChannel(parts[1]);
 		if (!channel)
-			return "Channel not found";
+			return ":irctic.com 403 " + parts[1] + " :No such channel\r\n"; // ERR_NOSUCHCHANNEL
 		if (!client.isOperatorIn(channel) && !channel->anyoneCanChangeTopic)
-			return "You must be an operator to change the topic.";
+			return ":irctic.com 482 " + channel->name + " :You're not channel operator\r\n"; // ERR_CHANOPRIVSNEEDED
 		
 		channel->topic = parts[2];
-		channel->broadcast("Topic changed to: " + parts[2] + "\n", server);
-		return (client.channel && client.channel == channel) ? "" : "Topic changed to: " + parts[2] + " in " + channel->name;
+		channel->broadcast(":irctic.com 332 " + channel->name + " :" + channel->topic + "\r\n", server); // RPL_TOPIC
+		return ":irctic.com 332 " + channel->name + " :" + channel->topic + "\r\n"; // Confirmation
 	}
+
+
 
 	else if (parts[0] == "MODE")
 	{
 		if (parts.size() < 3 || parts.size() > 4)
-			return "Format: \"MODE <channel name> <mode> <optional argument>\"";
+			return ":irctic.com 461 MODE :Not enough parameters\r\n"; // ERR_NEEDMOREPARAMS
 		Channel *channel = server.getChannel(parts[1]);
 		if (!client.isOperatorIn(channel))
-			return "You must be an operator to change the mode.";
+			return ":irctic.com 403 " + parts[1] + " :No such channel\r\n"; // ERR_NOSUCHCHANNEL
 		if (!channel)
-			return "Channel not found";
-		
+			return ":irctic.com 482 " + parts[1] + " :You're not channel operator\r\n"; // ERR_CHANOPRIVSNEEDED
+
 		std::string mode = parts[2];
 		if (mode == "+i")
+		{
 			channel->inviteOnly = true;
+			channel->broadcast(":irctic.com MODE " + channel->name + " +i\r\n", server); // RPL_CHANNELMODEIS
+		}
 		else if (mode == "-i")
+		{
 			channel->inviteOnly = false;
+			channel->broadcast(":irctic.com MODE " + channel->name + " -i\r\n", server); // RPL_CHANNELMODEIS
+		}
 		else if (mode == "+t")
+		{
 			channel->anyoneCanChangeTopic = true;
+			channel->broadcast(":irctic.com MODE " + channel->name + " +t\r\n", server); // RPL_CHANNELMODEIS
+		}
 		else if (mode == "-t")
+		{
 			channel->anyoneCanChangeTopic = false;
+			channel->broadcast(":irctic.com MODE " + channel->name + " -t\r\n", server); // RPL_CHANNELMODEIS
+		}
 		else if (mode == "+k")
 		{
 			if (parts.size() != 4)
-				return "Format: \"MODE <channel name> +k <password>\"";
+				return ":irctic.com 461 MODE +k :Not enough parameters\r\n"; // ERR_NEEDMOREPARAMS
 			channel->password = parts[3];
+			channel->broadcast(":irctic.com MODE " + channel->name + " +k " + channel->password + "\r\n", server); // RPL_CHANNELMODEIS
 		}
 		else if (mode == "-k")
+		{
 			channel->password = "";
+			channel->broadcast(":irctic.com MODE " + channel->name + " -k\r\n", server); // RPL_CHANNELMODEIS
+		}
 		else if (mode == "+l")
 		{
 			if (parts.size() != 4)
-				return "Format: \"MODE <channel name> +l <limit>\"";
+				return ":irctic.com 461 MODE +l :Not enough parameters\r\n"; // ERR_NEEDMOREPARAMS
 			channel->limit = std::stoi(parts[3]);
+			channel->broadcast(":irctic.com MODE " + channel->name + " +l " + std::to_string(channel->limit) + "\r\n", server); // RPL_CHANNELMODEIS
 		}
 		else if (mode == "-l")
+		{
 			channel->limit = 0;
+			channel->broadcast(":irctic.com MODE " + channel->name + " -l\r\n", server); // RPL_CHANNELMODEIS
+		}
 		else if (mode == "+o")
 		{
 			if (parts.size() != 4)
-				return "Format: \"MODE <channel name> +o <client nickname>\"";
+				return ":irctic.com 461 MODE +o :Not enough parameters\r\n"; // ERR_NEEDMOREPARAMS
 			unsigned int clientIdToOp = server.getClientIdByName(parts[3]);
 			if (clientIdToOp > 0)
+			{
 				channel->addOperator(clientIdToOp);
+				channel->broadcast(":irctic.com MODE " + channel->name + " +o " + parts[3] + "\r\n", server); // RPL_CHANNELMODEIS
+			}
 			else
-				return "Client not found.";
+				return ":irctic.com 401 " + parts[3] + " :No such nick/channel\r\n"; // ERR_NOSUCHNICK
 		}
 		else if (mode == "-o")
 		{
 			if (parts.size() != 4)
-				return "Format: \"MODE <channel name> -o <client nickname>\"";
+				return ":irctic.com 461 MODE -o :Not enough parameters\r\n"; // ERR_NEEDMOREPARAMS
 			unsigned int clientIdToDeop = server.getClientIdByName(parts[3]);
 			if (clientIdToDeop > 0)
+			{
 				channel->removeOperator(clientIdToDeop);
+				channel->broadcast(":irctic.com MODE " + channel->name + " -o " + parts[3] + "\r\n", server); // RPL_CHANNELMODEIS
+			}
 			else
-				return "Client not found.";
+				return ":irctic.com 401 " + parts[3] + " :No such nick/channel\r\n"; // ERR_NOSUCHNICK
 		}
 		else
-			return "Unrecognized mode. Available modes: +i, -i, +t, -t, +k, -k, +l, -l, +o, -o";
+			return ":irctic.com 501 " + mode + " :Unknown MODE flag\r\n"; // ERR_UMODEUNKNOWNFLAG
 		
-		return "Mode set.";
+		return "";
 	}
 
-	else if (parts[0] == "USERS")
-	{
-		// log all users
-		std::string response = "Users:\n";
-		for (auto &c : server.getClients())
-			response += "- " + c.getName() + " (id" + std::to_string(c.id) + ")\n";
-		response.pop_back();
-		return response;
-	}
+
 
 	return "Unrecognized command. Available commands: PASS, OPER, NICK, USER, JOIN, PRIVMSG / MSG, KICK, INVITE, TOPIC, MODE, USERS";
 }
