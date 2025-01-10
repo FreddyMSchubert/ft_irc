@@ -165,7 +165,7 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 			}
 			return response;
 		}
-		
+
 		std::string channelName = parts[1];
 		Channel *channel = server.getChannel(channelName);
 		if (!channel)
@@ -195,7 +195,7 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 			return ":irctic.com 412 PRIVMSG :No text to send\r\n"; // ERR_NOTEXTTOSEND
 
 		std::string target = parts[1];
-		std::string msg = client.getName() + ": ";
+		std::string msg = ":" + client.nickname + "!" + client.username + "@irctic.com PRIVMSG " + target + " :";
 		for (size_t i = 2; i < parts.size(); i++)
 		{
 			msg += parts[i];
