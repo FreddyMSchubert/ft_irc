@@ -224,8 +224,10 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 		if (channel->password != "" && (partsSize < 3 || parts[2] != channel->password))
 			return ":irctic.com 475 " + channelName + " :Cannot join channel (+k)\r\n"; // ERR_BADCHANNELKEY
 
+		channel->broadcast(":" + client.nickname + "!" + client.username + "@irctic.com JOIN " + channel->name, server, client.id);
 		std::string channelJoinReturn = channel->addMember(clientId, server);
 		client.channel = channel;
+
 
 		return channelJoinReturn;
 	}
@@ -244,6 +246,8 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 			partMessage += " :" + parts[1];
 		partMessage += "\r\n";
 
+		if (client.channel)
+			client.channel->broadcast(":" + client.nickname + "!" + client.username + "@irctic.com PART " + client.channel->name, server, client.id);
 		client.channel->removeMember(clientId, server);
 		client.channel = nullptr;
 
