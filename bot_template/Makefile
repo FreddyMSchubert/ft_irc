@@ -1,19 +1,20 @@
-NAME = bot_template
+NAME = bot
 
 CXX = c++
 CXXFLAGS = -g -std=c++17
 
-# TODO: Add all source files
+LIBS = -lcurl -lreadline
+
 SRCS = $(shell find . -name "*.cpp")
 HEADER = $(shell find . -name "*.hpp")
 
 OBJDIR = obj
-OBJS = $(SRCS:%.cpp=$(OBJDIR)/%.o)
+OBJS = $(SRCS:./%.cpp=$(OBJDIR)/%.o)
 
 all: $(NAME)
 
 $(NAME): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $(NAME) $(OBJS)
+	$(CXX) $(CXXFLAGS) -o $(NAME) $(OBJS) $(LIBS)
 
 $(OBJDIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
@@ -27,5 +28,3 @@ fclean: clean
 
 run: all
 	./$(NAME)
-
-re: fclean all

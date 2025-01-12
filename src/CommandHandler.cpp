@@ -93,6 +93,25 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 
 
 
+	else if (parts[0] == "BOT")
+	{
+		if (partsSize != 2 || partsSize != 4)
+			return ":irctic.com 461 BOT :Not enough parameters"; // ERR_NEEDMOREPARAMS
+		std::string command = std::string("../bot_template/bot ") + 
+			"\"127.0.0.1\" " + 
+			std::to_string(server.getPort()) + " " + 
+			"\"" + server.getPassword() + "\" " + 
+			"\"" + server.getClientNickById(clientId) + "\" " + 
+			"\"" + server.getClientUserById(clientId) + "\"" +
+			"\"" + parts[1] + "\""; + 
+			partsSize == 4 ? " \"" + parts[2] + "\"" : "";
+			partsSize == 4 ? " \"" + parts[3] + "\"" : "";
+		system(command.c_str());
+		return "";
+	}
+
+
+
 	else if (parts[0] == "OPER") // AUTHENTICATE AS OPERATOR
 	{
 		if (partsSize != 3)

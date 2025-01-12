@@ -5,6 +5,9 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include "Bot.hpp"
+#include "./bot_dadjokes/bot_dadjokes.hpp"
+#include "./bot_chatgpt/bot_chatgpt.hpp"
+#include "./bot_tictactoe/bot_tictactoe.hpp"
 
 void onMessage(std::string user, std::string channel, std::string message);
 void onDisconnect();
@@ -20,12 +23,56 @@ Bot &getBot()
 
 int main(int argc, char *argv[])
 {
-	Bot &bot = getBot();
-	bot.setCallbacks(onConnect, onError, onMessage, onDisconnect);
+	try
+	{
+		if (strcmp(argv[6], "dadjokes"))
+		{
+			Bot_DadJokes botDadJokes(
+				std::string(argv[1]),
+				std::atoi(argv[2]),
+				std::string(argv[3]),
+				std::string(argv[4]),
+				std::string(argv[5])
+			);
 
-	try {
-		bot.connectToServer();
-	} catch (std::exception& e) {
+			botDadJokes.setCallbacks(onConnect, onError, onMessage, onDisconnect);
+			botDadJokes.connectToServer();
+			botDadJokes.authenticate();
+			botDadJokes.sendMessage(botDadJokes.ApiCall());
+		}
+		else if (strcmp(argv[6], "chatgpt") && argv[7] != nullptr)
+		{
+			Bot_ChatGPT botChatGPT(
+				std::string(argv[1]),
+				std::atoi(argv[2]),
+				std::string(argv[3]),
+				std::string(argv[4]),
+				std::string(argv[5])
+			);
+
+			botChatGPT.setCallbacks(onConnect, onError, onMessage, onDisconnect);
+			botChatGPT.connectToServer();
+			botChatGPT.authenticate();
+			botChatGPT.sendMessage(botChatGPT.ApiCall(argv[7]));
+		}
+		else if (strcmp(argv[6], "MSG") || argv[6][0] == '#')
+		{
+			// Bot_TicTacToe botTicTacToe(
+			// 	std::string(argv[1]),
+			// 	std::atoi(argv[2]),
+			// 	std::string(argv[3]),
+			// 	std::string(argv[4]),
+			// 	std::string(argv[5]),
+			// 	std::string(argv[6])
+			// );
+
+			// botTicTacToe.setCallbacks(onConnect, onError, onMessage, onDisconnect);
+			// botTicTacToe.connectToServer();
+			// botTicTacToe.authenticate();
+		}
+	}
+	catch (const std::exception& e)
+	{
 		std::cerr << e.what() << std::endl;
 		return 1;
 	}
