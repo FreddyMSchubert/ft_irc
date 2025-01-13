@@ -1,7 +1,6 @@
 #include "Bot.hpp"
 #include <iostream>
 #include <stdexcept>
-#include <readline/readline.h>
 #include <string>
 #include <unistd.h>
 #include <sstream>
@@ -31,7 +30,7 @@ Socket::Socket()
 {
 	_socket_ip = "";
 	_socket_port = -1;
-	std::signal(SIGINT, this->signalHandler);
+	std::signal(SIGINT, signalHandler);
 	std::signal(SIGTERM, signalHandler);
 	std::signal(SIGQUIT, signalHandler);
 	std::signal(SIGKILL, signalHandler);
@@ -90,7 +89,7 @@ void Socket::connectToServer(std::string ip, int port)
 		{
 			_setNonBlocking();
 			std::cout << "Connected to server: " << ip << ":" << port << std::endl;
-			_onConnectCallback();
+			_running = true;
 		}
 
 	}
@@ -98,6 +97,7 @@ void Socket::connectToServer(std::string ip, int port)
 	{
 		throw std::runtime_error(e.what());
 	}
+	_onConnectCallback();
 }
 
 void Socket::queueMessage(std::string msg)
@@ -139,7 +139,6 @@ void Socket::Run()
 
 	std::cout << "Starting to poll for events" << std::endl;
 
-	_running = true;
 	while (_running)
 	{
 		int ret = poll(fds, 1, 50);
@@ -178,7 +177,7 @@ void Socket::Run()
 				std::cout << "Sending next message in queue!" << std::endl;
 				_sendMessage(_messages.front());
 				_messages.pop();
-				usleep(8000);
+				// usleep(8000);
 			}
 		}
 	}

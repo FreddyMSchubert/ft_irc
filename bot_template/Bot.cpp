@@ -27,22 +27,19 @@ void Bot::connectToServer()
 		socket.connectToServer(this->_ip, this->_port);
 	} catch (std::exception& e) {
 		throw std::runtime_error(std::string(e.what()));
-	} 
+	}
 }
 
 void Bot::authenticate()
 {
-	std::cout << "Authenticating..." << std::endl;
 	socket.queueMessage("PASS " + _password);
 	socket.queueMessage("NICK " + _nick);
-	socket.queueMessage("USER bot_" + _user + " osdjfiojdsf sdojfoijsdjsdfo");
-
+	socket.queueMessage("USER bot_" + _user);
 }
 
 void Bot::directMessage(std::string user, std::string msg)
 {
 	socket.queueMessage("PRIVMSG " + user + " " + msg);
-
 }
 
 void Bot::sendRawMessage(std::string msg)
@@ -76,14 +73,12 @@ void Bot::changeChannel(std::string channel, std::string password)
 void Bot::setCallbacks(onConnectCallback onConnect,
 					onErrorCallback onError,
 					onMessageCallback onMessage,
-					onDisconnectCallback onDisconnect,
-					onAuthenticateCallback onAuthenticate)
+					onDisconnectCallback onDisconnect)
 {
 	socket.setOnMessageCallback(onMessage);
 	socket.setOnDisconnectCallback(onDisconnect);
 	socket.setOnConnectCallback(onConnect);
 	socket.setOnErrorCallback(onError);
-	socket.setOnAuthenticateCallback(onAuthenticate);
 	std::cout << "Callbacks set!" << std::endl;
 }
 

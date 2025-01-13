@@ -11,7 +11,6 @@ void onMessage(std::string user, std::string channel, std::string message);
 void onDisconnect();
 void onConnect();
 void onError(std::string message);
-void onAuthenticate();
 
 Bot &getBot()
 {
@@ -27,7 +26,7 @@ int main(int argc, char *argv[])
 	{
 		Bot &bot = getBot();
 
-		bot.setCallbacks(onConnect, onError, onMessage, onDisconnect, onAuthenticate);
+		bot.setCallbacks(onConnect, onError, onMessage, onDisconnect);
 		bot.setIp("127.0.0.1");
 		bot.setPort(6667);
 		bot.setNick("bot");
@@ -36,9 +35,9 @@ int main(int argc, char *argv[])
 
 		bot.connectToServer();
 
-		bot.authenticate();
-		bot.startPollingForEvents();
-		bot.changeChannel("#bot");
+		// bot.authenticate();
+		// bot.startPollingForEvents();
+		// bot.changeChannel("#bot");
 
 	}
 	catch (const std::exception& e)
@@ -56,8 +55,9 @@ void onConnect()
 	std::cout << "Connected to IRC Server!" << std::endl;
 	try {
 		std::cout << "Trying to athenticate." << std::endl;
-		getBot().startPollingForEvents();
 		getBot().authenticate();
+		getBot().changeChannel("#bot");
+		getBot().startPollingForEvents();
 	} catch (std::exception& e) {
 		std::cerr << "Failed to authenticate: " << e.what() << std::endl;
 	}
@@ -69,19 +69,13 @@ void onError(std::string message)
 	std::cerr << "ERROR: " << message << std::endl;
 }
 
-void onAuthenticate()
-{
-	std::cout << "(on Authenticate) Authenticated!" << std::endl;
-	getBot().changeChannel("#bot");
-}
-
 // custom function to handle messages
 void onMessage(std::string user, std::string channel, std::string message)
 {
 	std::cout << "Message received:\n";
-	std::cout << "\tUser: " << user << "\n";
-	std::cout << "\tChannel: " << channel << "\n";
-	std::cout << "\tMessage: " << message << std::endl;
+	std::cout << "User:\t\t" << user << "\n";
+	std::cout << "Channel:\t\t" << channel << "\n";
+	std::cout << "Message:\t\t" << message << std::endl;
 
 	if (channel != "#bot")
 	{
