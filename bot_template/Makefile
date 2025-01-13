@@ -1,4 +1,4 @@
-NAME = bot
+NAME = bot_template
 
 CXX = c++
 CXXFLAGS = -g -std=c++17

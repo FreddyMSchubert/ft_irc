@@ -45,6 +45,7 @@ class Socket
 		struct sockaddr_in _socket;
 		static volatile bool _running;
 		bool error = false;
+		bool _authenticated = false;
 
 		void _setNonBlocking();
 		void _sendMessage(std::string msg);
@@ -83,7 +84,6 @@ class Bot
 
 		//socket
 		Socket socket;
-
 	public:
 		Bot(std::string ip, int port, std::string password, std::string nick, std::string user);
 		~Bot();
@@ -92,14 +92,13 @@ class Bot
 		Bot &operator=(const Bot &bot) = delete;
 
 		void connectToServer();
-		void authenticate();
 		void sendRawMessage(std::string msg);
 		void directMessage(std::string user, std::string msg);
 		void sendMessage(std::string msg);
 		void sendMessage(std::string channelname, std::string msg);
 		void changeChannel(std::string channelname);
 		void changeChannel(std::string channelname, std::string password);
-
+		void authenticate();
 		void setCallbacks(onConnectCallback onConnect,
 					onErrorCallback onError,
 					onMessageCallback onMessage,

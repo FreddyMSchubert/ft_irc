@@ -205,6 +205,13 @@ void Socket::_parseBuffer(std::string buffer)
 	if (buffer.find("Authentication successful") != std::string::npos)
 	{
 		std::cout << "Authentication successful!" << std::endl;
+		_authenticated = true;
+		return;
+	}
+
+	if (!_authenticated)
+	{
+		_onErrorCallback("Not authenticated yet");
 		return;
 	}
 
