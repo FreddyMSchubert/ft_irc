@@ -28,6 +28,7 @@ typedef std::function<void(std::string, std::string, std::string)> onMessageCall
 typedef std::function<void(void)> onDisconnectCallback;
 typedef std::function<void(void)> onConnectCallback;
 typedef std::function<void(std::string)> onErrorCallback;
+typedef std::function<void(void)> onAuthenticateCallback;
 
 class Socket
 {
@@ -36,6 +37,7 @@ class Socket
 		onMessageCallback			_onMessageCallback = nullptr;
 		onConnectCallback			_onConnectCallback = nullptr;
 		onErrorCallback				_onErrorCallback = nullptr;
+		onAuthenticateCallback		_onAuthenticateCallback = nullptr;
 
 		std::string					_socket_ip;
 		int							_socket_port;
@@ -45,6 +47,7 @@ class Socket
 		struct sockaddr_in _socket;
 		static volatile bool _running;
 		bool error = false;
+		bool _passwordCorrect = false;
 		bool _authenticated = false;
 
 		void _setNonBlocking();
@@ -63,6 +66,7 @@ class Socket
 		void setOnDisconnectCallback(onDisconnectCallback callback) { _onDisconnectCallback = callback; };
 		void setOnConnectCallback(onConnectCallback callback) { _onConnectCallback = callback; };
 		void setOnErrorCallback(onErrorCallback callback) { _onErrorCallback = callback; };
+		void setOnAuthenticateCallback(onConnectCallback callback) { _onConnectCallback = callback; };
 
 		void queueMessage(std::string msg);
 
@@ -75,7 +79,7 @@ class Bot
 	private:
 		std::string	_ip = "127.0.0.1";
 		int			_port = 6667;
-		std::string _password;
+		std::string _password = "password";
 		std::string	_current_channel;
 
 		//bot
@@ -85,11 +89,17 @@ class Bot
 		//socket
 		Socket socket;
 	public:
-		Bot(std::string ip, int port, std::string password, std::string nick, std::string user);
+		Bot();
 		~Bot();
 
 		Bot(const Bot &bot) = delete;
 		Bot &operator=(const Bot &bot) = delete;
+
+		void setIp(std::string ip) { _ip = ip; }
+		void setPort(int port) { _port = port; }
+		void setPassword(std::string password) { _password = password; }
+		void setNick(std::string nick) { _nick = nick; }
+		void setUser(std::string user) { _user = user; }
 
 		void connectToServer();
 		void sendRawMessage(std::string msg);
@@ -102,7 +112,8 @@ class Bot
 		void setCallbacks(onConnectCallback onConnect,
 					onErrorCallback onError,
 					onMessageCallback onMessage,
-					onDisconnectCallback onDisconnect);
+					onDisconnectCallback onDisconnect,
+					onAuthenticateCallback onAuthenticate);
 
 		void startPollingForEvents();
 };

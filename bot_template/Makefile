@@ -3,7 +3,7 @@ NAME = bot_template
 CXX = c++
 CXXFLAGS = -g -std=c++17
 
-LIBS = -lcurl -lreadline
+LIBS = 
 
 SRCS = $(shell find . -name "*.cpp")
 HEADER = $(shell find . -name "*.hpp")

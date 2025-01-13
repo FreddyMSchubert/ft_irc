@@ -7,6 +7,7 @@
 #include <sstream>
 #include <csignal>
 #include <cstring>
+#include <regex>
 
 volatile bool Socket::_running = false;
 
@@ -39,8 +40,7 @@ Socket::Socket()
 
 Socket::~Socket()
 {
-	if (!error)
-		this->_sendMessage("QUIT");
+	std::cout << "Closing socket: " << _socket_fd << std::endl;
 	close(_socket_fd);
 }
 
@@ -90,15 +90,14 @@ void Socket::connectToServer(std::string ip, int port)
 		{
 			_setNonBlocking();
 			std::cout << "Connected to server: " << ip << ":" << port << std::endl;
+			_onConnectCallback();
 		}
-
 
 	}
 	catch(const std::exception &e)
 	{
 		throw std::runtime_error(e.what());
 	}
-	_onConnectCallback();
 }
 
 void Socket::queueMessage(std::string msg)
@@ -137,6 +136,8 @@ void Socket::Run()
 	struct pollfd fds[1];
 	fds[0].fd = _socket_fd;
 	fds[0].events = POLLIN | POLLOUT;
+
+	std::cout << "Starting to poll for events" << std::endl;
 
 	_running = true;
 	while (_running)
@@ -186,39 +187,21 @@ void Socket::Run()
 // TODO: cant really do this with find
 void Socket::_parseBuffer(std::string buffer)
 {
-	if (buffer.find("Your username is now ") != std::string::npos)
-	{
-		std::cout << "Username set!" << std::endl;
+	if (buffer.empty())
 		return;
-	}
-	if (buffer.find("Your nickname is now ") != std::string::npos)
-	{
-		std::cout << "Nickname set!" << std::endl;
-		return;
-	}
-	if (buffer.find("Authentication failed.") != std::string::npos)
-	{
-		_onErrorCallback("Authentication failed.");
-		error = true;
-		return;
-	}
-	if (buffer.find("Authentication successful") != std::string::npos)
-	{
-		std::cout << "Authentication successful!" << std::endl;
-		_authenticated = true;
-		return;
-	}
 
-	if (!_authenticated)
-	{
-		_onErrorCallback("Not authenticated yet");
-		return;
-	}
+	std::cout << "Parsing buffer: " << buffer << std::endl;
 
-	// TODO: implement proper parsing like privmsg is formatted like name: message
-	std::string user, channel, message;
-	std::istringstream iss(buffer);
-	iss >> user >> channel;
-	std::getline(iss, message);
-	_onMessageCallback(user, channel, message);
+	std::regex privmsgRegex(":([^!]+)![^ ]+ PRIVMSG ([^ ]+) :(.+)");
+	std::smatch match;
+	if (std::regex_search(buffer, match, privmsgRegex))
+	{
+		if (match.size() == 4)
+		{
+			std::string user = match[1];
+			std::string channel = match[2];
+			std::string message = match[3];
+			_onMessageCallback(user, channel, message);
+		}
+	}
 }
