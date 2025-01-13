@@ -95,17 +95,18 @@ void Server::handleExistingConnections()
 {
 	for (int i = (int)_sockets.size() - 1; i >= 0; i--)
 	{
-		if (_sockets[i].states.disconnect || _sockets[i].states.error)
-		{
-			if (_sockets[i].states.disconnect)
-				Logger::Log(LogLevel::INFO, "Client disconnected");
-			else
-				Logger::Log(LogLevel::ERROR, "Error occurred on client socket: " + std::string(strerror(errno)));
-			if (_sockets[i].channel)
-				_sockets[i].channel->removeMember(_sockets[i].id, *this);
-			_sockets.erase(_sockets.begin() + i);
-			continue;
-		}
+        // if (_sockets[i].states.disconnect || _sockets[i].states.error)
+        // {
+        //     if (_sockets[i].states.disconnect)
+        //         Logger::Log(LogLevel::INFO, "Client disconnected");
+        //     else
+        //         Logger::Log(LogLevel::ERROR, "Error occurred with client: " + std::string(strerror(errno)));
+        //     if (_sockets[i].channel)
+        //         _sockets[i].channel->removeMember(_sockets[i].id, *this);
+        //     _sockets.erase(_sockets.begin() + i);
+        //     continue;
+        // }
+
 		if (_sockets[i].states.read)
 		{
 			try

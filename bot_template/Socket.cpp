@@ -113,7 +113,8 @@ void Socket::_sendMessage(std::string msg)
 		_onErrorCallback("Message is empty");
 		return;
 	}
-	ssize_t sent = send(_socket_fd, msg.append("\n").c_str(), msg.length(), 0);
+	msg = msg.append("\r\n");
+	ssize_t sent = send(_socket_fd, msg.c_str(), msg.length(), 0); //TODO: for some reason it sends everything except the last char
 	if (sent == -1)
 	{
 		if (errno == EPIPE)

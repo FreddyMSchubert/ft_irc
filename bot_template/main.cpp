@@ -2,7 +2,6 @@
 #include <iostream>
 #include <cstring>
 #include <cstdlib>
-#include <tuple>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include "Bot.hpp"
@@ -85,6 +84,12 @@ void onMessage(std::string user, std::string channel, std::string message)
 
 	if (message == "ping")
 		getBot().directMessage(user, "pong");
+	else if (message == "hello")
+   	    getBot().directMessage(user, "Hello! How are you?");
+    else if (message == "bye")
+        getBot().directMessage(user, "Goodbye! Have a nice day!");
+    else
+        getBot().directMessage(user, "Hello " + user + "! You said: " + message);
 
 	// getBot().directMessage(user, "Hello! You said: " + message);
 }
