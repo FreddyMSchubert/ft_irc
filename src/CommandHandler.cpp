@@ -93,25 +93,6 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 
 
 
-	// else if (parts[0] == "BOT")
-	// {
-	// 	if (partsSize != 2 || partsSize != 4)
-	// 		return ":irctic.com 461 BOT :Not enough parameters"; // ERR_NEEDMOREPARAMS
-	// 	std::string command = std::string("../bot_template/bot ") + 
-	// 		"\"127.0.0.1\" " + 
-	// 		std::to_string(server.getPort()) + " " + 
-	// 		"\"" + server.getPassword() + "\" " + 
-	// 		"\"" + server.getClientNickById(clientId) + "\" " + 
-	// 		"\"" + server.getClientUserById(clientId) + "\"" +
-	// 		"\"" + parts[1] + "\""; + 
-	// 		partsSize == 4 ? " \"" + parts[2] + "\"" : "";
-	// 		partsSize == 4 ? " \"" + parts[3] + "\"" : "";
-	// 	system(command.c_str());
-	// 	return "";
-	// }
-
-
-
 	else if (parts[0] == "OPER") // AUTHENTICATE AS OPERATOR
 	{
 		if (partsSize != 3)
@@ -119,11 +100,13 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 		if (!client.isAuthenticated)
 			return ":irctic.com 451 * :You have not registered"; // ERR_NOTREGISTERED
 
-		Client *clientPtr = server.getClientByName(parts[1]);
-		if (server.isCorrectOperatorPassword(parts[2]) && clientPtr)
+		Client *target = server.getClientByName(parts[1]);
+		if (!target)
+			return ":irctic.com 401 " + parts[1] + " :No such nick/channel"; // ERR_NOSUCHNICK
+		if (server.isCorrectOperatorPassword(parts[2]))
 		{
-			clientPtr->isOperator = true;
-			return ":irctic.com 381 * :" + clientPtr->nickname + " is now an IRC operator"; // RPL_YOUREOPER
+			target->isOperator = true;
+			return ":irctic.com 381 * :" + target->nickname + " is now an IRC operator"; // RPL_YOUREOPER
 		}
 		std::cout << "Typed operator password: \"" << parts[2] << "\"" << std::endl;
 		return ":irctic.com 464 * :Operator password incorrect"; // ERR_PASSWDMISMATCH
@@ -270,9 +253,10 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 					Client *targetClientPtr = server.getClientByName(target);
 					if (!targetClientPtr)
 						return ":irctic.com 401 " + target + " :No such nick/channel"; // ERR_NOSUCHNICK
-					std::string forwardMessage = ":irctic.com 401 ";
-
-					targetClientPtr->sendMessage(":irctic.com 200 PRIVMSG " + targetClientPtr->nickname + " " + parts[2] + " :Kicked");
+					targetClientPtr->sendMessage(":" + client.nickname + "!" + client.username + "@irctic.com "
+						+ "PRIVMSG " + target + " :" + CTCP_DELIMITER
+						+ dccCommand 
+						+ CTCP_DELIMITER + "\r\n");
 					return ""; // no direct server response to the sender
 				}
 				else
@@ -352,7 +336,7 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 		channel->addMember(clientToInvite->id, server);
 
 		clientToInvite->sendMessage(":irctic.com INVITE " + userToInvite + " " + channel->name + " :You've been invited to the channel"); // RPL_INVITE
-		return "Invited " + userToInvite + " to " + channel->name + ".";
+		return ":irctic.com 341 INVITE " + userToInvite + " " + channel->name + " :Invited"; // Custom success reply
 	}
 
 

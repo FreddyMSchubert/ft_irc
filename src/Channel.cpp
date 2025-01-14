@@ -18,24 +18,25 @@ std::string Channel::addMember(unsigned int clientId, Server &server, bool wasIn
 	if (_members[clientId])
 		return "You are already in this channel.";
 
-	if (server.getClientById(clientId))
-		server.getClientById(clientId)->channel = this;
+	Client * client = server.getClientById(clientId);
+	if (!client)
+		return "Client does not exist.";
 
 	_members[clientId] = true;
-	Logger::Log(LogLevel::INFO, std::string("Added client ") + server.getClientNameById(clientId) + " to channel " + name + ".");
+	Logger::Log(LogLevel::INFO, std::string("Added client ") + client->nickname + " to channel " + name + ".");
 	if (server.getClientById(clientId))
-		broadcast(":" + server.getClientNameById(clientId) + "!" + server.getClientById(clientId)->username + "@irctic.com JOIN " + name, server, -1);
+		broadcast(":" + client->nickname + "!" + server.getClientById(clientId)->username + "@irctic.com JOIN " + name, server, -1);
 	return "You have joined " + name + ".";
 }
 void Channel::removeMember(unsigned int clientId, Server &server)
 {
-	std::cout << "Removing member " << clientId << " from channel " << name << std::endl;
+	Logger::Log(LogLevel::INFO, std::string("Removing member ") + std::to_string(clientId) + " from channel " + name);
 	_members[clientId] = false;
 	Client * client = server.getClientById(clientId); 
-	if (client)
-		client->channel = nullptr;
-	if (server.getClientById(clientId))
-		broadcast(":" + server.getClientNameById(clientId) + "!" + server.getClientById(clientId)->username + "@irctic.com PART " + name, server, -1);
+	if (!client)
+		return;
+	client->channel = nullptr;
+	broadcast(":" + client->nickname + "!" + server.getClientById(clientId)->username + "@irctic.com PART " + name, server, -1);
 }
 
 void Channel::broadcast(std::string msg, Server &server, unsigned int except_id)

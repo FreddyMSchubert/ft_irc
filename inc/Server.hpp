@@ -52,11 +52,6 @@ class Server
 
 		std::vector<Client> &getClients();
 		Client * getClientById(unsigned int id);
-		std::string getClientNameById(unsigned int id);
-		std::string getClientNickById(unsigned int id);
-		std::string getClientUserById(unsigned int id);
 		unsigned int getClientIdByName(std::string name);
 		Client * getClientByName(std::string name);
-		int getPort() { return _port; };
-		std::string getPassword() { return _password; };
 };

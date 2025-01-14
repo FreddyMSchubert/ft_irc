@@ -178,27 +178,6 @@ std::vector<Client> &Server::getClients()
 {
 	return _sockets;
 }
-std::string Server::getClientNameById(unsigned int id)
-{
-	for (auto& client : _sockets)
-		if (client.id == id)
-			return client.getName();
-	return "unnamed user";
-}
-std::string Server::getClientNickById(unsigned int id)
-{
-	for (auto& client : _sockets)
-		if (client.id == id)
-			return client.nickname;
-	return "";
-}
-std::string Server::getClientUserById(unsigned int id)
-{
-	for (auto& client : _sockets)
-		if (client.id == id)
-			return client.username;
-	return "";
-}
 unsigned int Server::getClientIdByName(std::string name)
 {
 	for (auto& client : _sockets)
@@ -227,7 +206,6 @@ Channel *Server::getChannel(std::string channelName)
 {
 	for (auto& channel_ptr : _channels)
 	{
-		std::cout << channel_ptr.name << std::endl;
 		if (channel_ptr.name == channelName)
 			return &channel_ptr;
 	}
