@@ -10,6 +10,7 @@ void onMessage(std::string user, std::string channel, std::string message);
 void onDisconnect();
 void onConnect();
 void onError(std::string message);
+void onUserChannelJoin(std::string user, std::string channel);
 
 Bot &getBot()
 {
@@ -25,7 +26,7 @@ int main(int argc, char *argv[])
 	{
 		Bot &bot = getBot();
 
-		bot.setCallbacks(onConnect, onError, onMessage, onDisconnect);
+		bot.setCallbacks(onConnect, onError, onMessage, onDisconnect, onUserChannelJoin);
 		bot.setIp("127.0.0.1");
 		bot.setPort(6667);
 		bot.setNick("bot");
@@ -76,26 +77,37 @@ void onMessage(std::string user, std::string channel, std::string message)
 	std::cout << "Channel:\t\t" << channel << "\n";
 	std::cout << "Message:\t\t" << message << std::endl;
 
+	Bot &bot = getBot();
+
 	if (channel != "#bot")
 	{
-		getBot().directMessage(user, "Please send messages to #bot channel only.");
+		bot.directMessage(user, "Please send messages to #bot channel only.");
 		return;
 	}
 
 	if (message == "ping")
-		getBot().directMessage(user, "pong");
+		bot.directMessage(user, "pong");
 	else if (message == "hello")
-   	    getBot().directMessage(user, "Hello! How are you?");
-    else if (message == "bye")
-        getBot().directMessage(user, "Goodbye! Have a nice day!");
-    else
-        getBot().directMessage(user, "Hello " + user + "! You said: " + message);
+		bot.directMessage(user, "Hello! How are you?");
+	else if (message == "bye")
+		bot.directMessage(user, "Goodbye! Have a nice day!");
+	else if (message == "help")
+		bot.directMessage(user, "Available commands: ping, hello, bye, help");
+	else
+		bot.directMessage(user, "Hello " + user + "! You said: " + message);
 
-	// getBot().directMessage(user, "Hello! You said: " + message);
+	// bot.directMessage(user, "Hello! You said: " + message);
 }
 
 // custom function to handle disconnect
 void onDisconnect()
 {
 	std::cerr << "Disconnected from server!" << std::endl;
+}
+
+void onUserChannelJoin(std::string user, std::string channel)
+{
+	std::cout << "User " << user << " joined channel " << channel << std::endl;
+
+	getBot().directMessage(channel, "Welcome " + user + " to the channel! Type 'help' for available commands.");
 }

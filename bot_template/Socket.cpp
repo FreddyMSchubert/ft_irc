@@ -178,10 +178,17 @@ void Socket::Run()
 				std::cout << "Sending next message in queue!" << std::endl;
 				_sendMessage(_messages.front());
 				_messages.pop();
-				// usleep(8000);
 			}
 		}
 	}
+}
+
+static std::string trim(const std::string &str)
+{
+    size_t start = str.find_first_not_of("\r\n");
+    size_t end = str.find_last_not_of("\r\n");
+
+    return (start == std::string::npos || end == std::string::npos) ? "" : str.substr(start, end - start + 1);
 }
 
 // TODO: cant really do this with find
@@ -192,16 +199,28 @@ void Socket::_parseBuffer(std::string buffer)
 
 	std::cout << "Parsing buffer: " << buffer << std::endl;
 
+	std::regex joinRegex(":([^!]+)![^ ]+ JOIN ([^ ]+)");
+	std::smatch matchJoin;
+	if (std::regex_search(buffer, matchJoin, joinRegex))
+    {
+        if (matchJoin.size() == 3)
+        {
+            std::string user = matchJoin[1];
+            std::string channel = matchJoin[2];
+            _onUserChannelJoinCallback(trim(user), trim(channel));
+        }
+    }
+
 	std::regex privmsgRegex(":([^!]+)![^ ]+ PRIVMSG ([^ ]+) :(.+)");
-	std::smatch match;
-	if (std::regex_search(buffer, match, privmsgRegex))
+	std::smatch matchPriv;
+	if (std::regex_search(buffer, matchPriv, privmsgRegex))
 	{
-		if (match.size() == 4)
+		if (matchPriv.size() == 4)
 		{
-			std::string user = match[1];
-			std::string channel = match[2];
-			std::string message = match[3];
-			_onMessageCallback(user, channel, message);
+			std::string user = matchPriv[1];
+			std::string channel = matchPriv[2];
+			std::string message = matchPriv[3];
+			_onMessageCallback(trim(user), trim(channel), trim(message));
 		}
 	}
 }

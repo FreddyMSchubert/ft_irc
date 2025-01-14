@@ -73,12 +73,14 @@ void Bot::changeChannel(std::string channel, std::string password)
 void Bot::setCallbacks(onConnectCallback onConnect,
 					onErrorCallback onError,
 					onMessageCallback onMessage,
-					onDisconnectCallback onDisconnect)
+					onDisconnectCallback onDisconnect,
+					onUserChannelJoinCallback onUserChannelJoin)
 {
 	socket.setOnMessageCallback(onMessage);
 	socket.setOnDisconnectCallback(onDisconnect);
 	socket.setOnConnectCallback(onConnect);
 	socket.setOnErrorCallback(onError);
+	socket.setOnUserChannelJoinCallback(onUserChannelJoin);
 	std::cout << "Callbacks set!" << std::endl;
 }
 
