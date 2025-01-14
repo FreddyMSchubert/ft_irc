@@ -11,8 +11,8 @@ void Server::Run()
 {
 	while (running) // to exit program, please send sigint
 	{
-		updatePoll();
 		acceptNewConnections();
+		updatePoll();
 		handleExistingConnections();
 	}
 
@@ -41,7 +41,7 @@ void Server::updatePoll()
 	}
 	struct pollfd listen_pfd;
 	listen_pfd.fd = _listening_socket.socket.getSocketFd();
-	listen_pfd.events = POLLIN | POLLOUT | POLLERR | POLLHUP;
+	listen_pfd.events = POLLIN | POLLERR | POLLHUP;
 	fds.push_back(listen_pfd);
 
 	// poll
@@ -54,7 +54,6 @@ void Server::updatePoll()
 
 	// Read out poll data
 	_listening_socket.states.read = fds[fds.size() - 1].revents & POLLIN;
-	_listening_socket.states.write = fds[fds.size() - 1].revents & POLLOUT;
 	_listening_socket.states.disconnect = fds[fds.size() - 1].revents & POLLHUP;
 	_listening_socket.states.error = fds[fds.size() - 1].revents & POLLERR;
 	for (size_t i = 0; i < fds.size() - 1; i++)
@@ -83,11 +82,7 @@ void Server::acceptNewConnections()
 			max_iterations--;
 		}
 		else
-		{
-			if (errno != EAGAIN && errno != EWOULDBLOCK) // i believe accept is not an i/o operation
-				Logger::Log(LogLevel::ERROR, "Accept error: " + std::string(strerror(errno)));
-			break;
-		}
+			break; // no more clients to accept
 	}
 }
 
@@ -95,18 +90,17 @@ void Server::handleExistingConnections()
 {
 	for (int i = (int)_sockets.size() - 1; i >= 0; i--)
 	{
-        // if (_sockets[i].states.disconnect || _sockets[i].states.error)
-        // {
-        //     if (_sockets[i].states.disconnect)
-        //         Logger::Log(LogLevel::INFO, "Client disconnected");
-        //     else
-        //         Logger::Log(LogLevel::ERROR, "Error occurred with client: " + std::string(strerror(errno)));
-        //     if (_sockets[i].channel)
-        //         _sockets[i].channel->removeMember(_sockets[i].id, *this);
-        //     _sockets.erase(_sockets.begin() + i);
-        //     continue;
-        // }
-
+		if (_sockets[i].states.disconnect || _sockets[i].states.error)
+		{
+			if (_sockets[i].states.disconnect)
+				Logger::Log(LogLevel::INFO, "Client disconnected");
+			else
+				Logger::Log(LogLevel::ERROR, "Error occurred with client: " + std::string(strerror(errno)));
+			if (_sockets[i].channel) 
+				_sockets[i].channel->removeMember(_sockets[i].id, *this);
+			_sockets.erase(_sockets.begin() + i);
+			continue;
+		}
 		if (_sockets[i].states.read)
 		{
 			try

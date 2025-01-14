@@ -18,6 +18,7 @@ void handle_sigint(int signal)
 int main(int argc, char **argv)
 {
 	if (argc != 4)
+	
 	{
 		Logger::Log(LogLevel::ERROR, std::string("Incorrect arguments. Usage: ") + argv[0] + " <port> <password> <operator password>");
 		return -1;

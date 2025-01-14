@@ -3,9 +3,9 @@
 #include "../inc/Channel.hpp" // avoid circ depend
 
 Client::Client(int fd, Socket socket, int id) // Client socket constructor
-	: id(id), socket(std::move(socket)), fd(fd) {}
+	: id(id), socket(std::move(socket)), fd(fd), states({0, 0, 0, 0}) {}
 Client::Client(int port) // Listening socket constructor
-	: id(-1), socket(port), fd(socket.getSocketFd()) {}
+	: id(-1), socket(port), fd(socket.getSocketFd()), states({0, 0, 0, 0}) {}
 
 Client::Client(Client&& other) noexcept :
 	id(other.id),
