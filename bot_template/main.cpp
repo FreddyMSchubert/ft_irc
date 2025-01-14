@@ -11,6 +11,7 @@ void onDisconnect();
 void onConnect();
 void onError(std::string message);
 void onUserChannelJoin(std::string user, std::string channel);
+void onUserChannelLeave(std::string user, std::string channel);
 
 Bot &getBot()
 {
@@ -26,7 +27,14 @@ int main(int argc, char *argv[])
 	{
 		Bot &bot = getBot();
 
-		bot.setCallbacks(onConnect, onError, onMessage, onDisconnect, onUserChannelJoin);
+		bot.setCallbacks(
+				onConnect,
+				onError,
+				onMessage,
+				onDisconnect,
+				onUserChannelJoin,
+				onUserChannelLeave
+			);
 		bot.setIp("127.0.0.1");
 		bot.setPort(6667);
 		bot.setNick("bot");
@@ -110,4 +118,11 @@ void onUserChannelJoin(std::string user, std::string channel)
 	std::cout << "User " << user << " joined channel " << channel << std::endl;
 
 	getBot().directMessage(channel, "Welcome " + user + " to the channel! Type 'help' for available commands.");
+}
+
+void onUserChannelLeave(std::string user, std::string channel)
+{
+	std::cout << "User " << user << " left channel " << channel << std::endl;
+
+	getBot().directMessage(user, "Goodbye " + user + "! Have a nice day!");
 }

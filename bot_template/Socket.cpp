@@ -201,7 +201,7 @@ void Socket::_parseBuffer(std::string buffer)
 
 	std::regex joinRegex(":([^!]+)![^ ]+ JOIN ([^ ]+)");
 	std::smatch matchJoin;
-	if (std::regex_search(buffer, matchJoin, joinRegex))
+	if (buffer.find("JOIN") != std::string::npos && std::regex_search(buffer, matchJoin, joinRegex))
     {
         if (matchJoin.size() == 3)
         {
@@ -211,9 +211,23 @@ void Socket::_parseBuffer(std::string buffer)
         }
     }
 
+	std::regex partRegex(":([^!]+)!([^@]+)@([^ ]+) PART ([^ ]+)");
+    std::smatch matchPart;
+    if (buffer.find("PART") != std::string::npos && std::regex_search(buffer, matchPart, partRegex))
+    {
+        if (matchPart.size() == 5)
+        {
+            std::string nick = matchPart[1];
+            std::string user = matchPart[2];
+            std::string host = matchPart[3];
+            std::string channel = matchPart[4];
+            _onUserChannelLeaveCallback(trim(nick), trim(channel));
+        }
+    }
+
 	std::regex privmsgRegex(":([^!]+)![^ ]+ PRIVMSG ([^ ]+) :(.+)");
 	std::smatch matchPriv;
-	if (std::regex_search(buffer, matchPriv, privmsgRegex))
+	if (buffer.find("PRIVMSG") != std::string::npos && std::regex_search(buffer, matchPriv, privmsgRegex))
 	{
 		if (matchPriv.size() == 4)
 		{

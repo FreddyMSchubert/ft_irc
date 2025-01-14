@@ -29,6 +29,7 @@ typedef std::function<void(void)> onDisconnectCallback;
 typedef std::function<void(void)> onConnectCallback;
 typedef std::function<void(std::string)> onErrorCallback;
 typedef std::function<void(std::string, std::string)> onUserChannelJoinCallback;
+typedef std::function<void(std::string, std::string)> onUserChannelLeaveCallback;
 
 class Socket
 {
@@ -38,10 +39,11 @@ class Socket
 		onConnectCallback			_onConnectCallback = nullptr;
 		onErrorCallback				_onErrorCallback = nullptr;
 		onUserChannelJoinCallback	_onUserChannelJoinCallback = nullptr;
+		onUserChannelLeaveCallback	_onUserChannelLeaveCallback = nullptr;
 
 		std::string					_socket_ip;
 		int							_socket_port;
-		std::queue<std::string>	_messages;
+		std::queue<std::string>		_messages;
 
 		int _socket_fd = -1;
 		struct sockaddr_in _socket;
@@ -67,6 +69,7 @@ class Socket
 		void setOnConnectCallback(onConnectCallback callback) { _onConnectCallback = callback; };
 		void setOnErrorCallback(onErrorCallback callback) { _onErrorCallback = callback; };
 		void setOnUserChannelJoinCallback(onUserChannelJoinCallback callback) { _onUserChannelJoinCallback = callback; };
+		void setOnUserChannelLeaveCallback(onUserChannelJoinCallback callback) { _onUserChannelLeaveCallback = callback; };
 
 		void queueMessage(std::string msg);
 
@@ -113,7 +116,8 @@ class Bot
 					onErrorCallback onError,
 					onMessageCallback onMessage,
 					onDisconnectCallback onDisconnect,
-					onUserChannelJoinCallback onUserChannelJoin);
+					onUserChannelJoinCallback onUserChannelJoin,
+					onUserChannelLeaveCallback onUserChannelLeave);
 
 		void startPollingForEvents();
 };
