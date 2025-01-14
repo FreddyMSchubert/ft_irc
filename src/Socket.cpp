@@ -21,9 +21,9 @@ Socket::Socket(int port) : _port(port)
 			perror("setsockopt");
 			exit(EXIT_FAILURE);
 		}
-		
+
 		if (bind(_socket_fd, (struct sockaddr *)&_socket, sizeof(_socket)) < 0)
-		{	
+		{
 			close(_socket_fd);
 			throw std::runtime_error("Failed to bind socket" + std::to_string(_socket_fd));
 		}
@@ -45,7 +45,13 @@ Socket::Socket(int port) : _port(port)
 Socket::Socket(int fd, int port) : _port(port)
 {
 	_socket_fd = fd;
-	setNonBlocking();
+	try {
+	    setNonBlocking();
+    }
+    catch(const std::exception &e)
+    {
+        throw std::runtime_error("Failed to set socket with to non blocking" + std::string(e.what()));
+	}
 }
 
 Socket::Socket(Socket&& other) noexcept

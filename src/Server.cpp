@@ -78,7 +78,13 @@ void Server::acceptNewConnections()
 		if (client_fd >= 0)
 		{
 			Logger::Log(LogLevel::INFO, "New client connected");
-			_sockets.emplace_back(client_fd, Socket(client_fd, _port), current_id++);
+			try {
+			    _sockets.emplace_back(client_fd, Socket(client_fd, _port), current_id++);
+			}
+			catch (std::exception &e)
+			{
+                Logger::Log(LogLevel::ERROR, "Failed to create new client: " + std::string(e.what()));
+            }
 			max_iterations--;
 		}
 		else
@@ -96,7 +102,7 @@ void Server::handleExistingConnections()
 				Logger::Log(LogLevel::INFO, "Client disconnected");
 			else
 				Logger::Log(LogLevel::ERROR, "Error occurred with client: " + std::string(strerror(errno)));
-			if (_sockets[i].channel) 
+			if (_sockets[i].channel)
 				_sockets[i].channel->removeMember(_sockets[i].id, *this);
 			_sockets.erase(_sockets.begin() + i);
 			continue;

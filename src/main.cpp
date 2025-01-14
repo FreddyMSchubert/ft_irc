@@ -18,7 +18,7 @@ void handle_sigint(int signal)
 int main(int argc, char **argv)
 {
 	if (argc != 4)
-	
+
 	{
 		Logger::Log(LogLevel::ERROR, std::string("Incorrect arguments. Usage: ") + argv[0] + " <port> <password> <operator password>");
 		return -1;
@@ -42,8 +42,15 @@ int main(int argc, char **argv)
 		Logger::Log(LogLevel::ERROR, "Trouble parsing port");
 	}
 
-	Server cm(port, password, opPassword);
-	cm.Run();
+	try {
+	    Server cm(port, password, opPassword);
+		cm.Run();
+	}
+	catch (const std::exception &e)
+    {
+        Logger::Log(LogLevel::ERROR, std::string("Failed to create server: ") + e.what());
+        return -1;
+    }
 
 	return 0;
 }
