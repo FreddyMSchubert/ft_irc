@@ -28,7 +28,7 @@ class Channel
 		void broadcast(std::string msg, Server &server, unsigned int except_id = -1);
 
 		std::string addMember(unsigned int client, Server &server, bool wasInvited = false);
-		void removeMember(unsigned int clientId, Server &server);
+		std::string removeMember(unsigned int clientId, Server &server);
 		std::map<unsigned int, bool> & getMembers();
 	
 		void kick(unsigned int clientId, Server &server);
