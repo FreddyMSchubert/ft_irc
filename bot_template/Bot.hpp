@@ -104,6 +104,12 @@ class Bot
 		void setNick(std::string nick) { _nick = nick; }
 		void setUser(std::string user) { _user = user; }
 
+		std::string getIp() {return _ip;}
+		int			getPort() {return _port;}
+		std::string	getPassword() {return _password;}
+		std::string	getNick() {return _nick;}
+		std::string getUser() {return _user;}
+
 		void connectToServer();
 		void sendRawMessage(std::string msg);
 		void directMessage(std::string user, std::string msg);
