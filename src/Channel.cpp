@@ -25,7 +25,7 @@ std::string Channel::addMember(unsigned int clientId, Server &server, bool wasIn
 	_members[clientId] = true;
 	Logger::Log(LogLevel::INFO, std::string("Added client ") + client->nickname + " to channel " + name + ".");
 	broadcast(":" + client->nickname + "!" + server.getClientById(clientId)->username + "@irctic.com JOIN " + name, server, clientId);
-	return ":irctic.com 332 " + client->nickname + " " + name + " :You have joined " + name + ". Cheers! (•‿•)";
+	return ":" + client->nickname + "!" + client->username + "@irctic.com JOIN " + name;
 }
 std::string Channel::removeMember(unsigned int clientId, Server &server)
 {

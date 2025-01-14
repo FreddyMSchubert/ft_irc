@@ -185,8 +185,25 @@ std::string CommandHandler::HandleCommand(std::string inCommand, unsigned int cl
 		std::string channelJoinReturn = channel->addMember(clientId, server);
 		client.channel = channel;
 
-
 		return channelJoinReturn;
+	}
+
+
+
+	else if (parts[0] == "QUIT") // DISCONNECT
+	{
+		if (partsSize > 1)
+			return "QUIT :" + parts[1] + "\r\n";
+		std::vector<Client> &clients = server.getClients();
+		for (auto it = clients.begin(); it != clients.end(); it++)
+		{
+			if (it->id == clientId)
+			{
+				clients.erase(it);
+				break;
+			}
+		}
+		return "QUIT\r\n";
 	}
 
 
